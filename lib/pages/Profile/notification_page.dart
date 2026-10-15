@@ -332,6 +332,7 @@ class _NotificationPageState extends State<NotificationPage> {
 
   // ==================== EMPTY STATE ====================
 
+  // ignore: unused_element
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
