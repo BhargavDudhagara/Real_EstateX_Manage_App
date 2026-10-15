@@ -1,0 +1,20 @@
+login
+functionality
+use case
+dfd 
+dfd level 1
+class diagram  user &security app ui   resource management  operation analysis  
+activity diagram
+8320732456
+
+
+
+
+1) Property Price Comparison
+2)Visit Booking System  
+3) Nearby Property Finder   
+4) Advanced Search & Filter    
+5)Property Inquiry    
+6)EMI Calculator & Mortgage Calculator
+
+

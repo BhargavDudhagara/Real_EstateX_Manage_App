@@ -1,0 +1,946 @@
+1) Homepage
+
+BuyerHomePage
+└── Scaffold
+    ├── AppBar
+    │   ├── Image.asset
+    │   │   └── EstateX Logo
+    │   ├── Text
+    │   │   └── EstateX
+    │   └── IconButton
+    │       └── Notification Icon
+    │
+    ├── Body
+    │   └── SafeArea
+    │       └── SingleChildScrollView
+    │           └── Column
+    │               ├── Property Banner
+    │               │   └── PageView
+    │               │       ├── Image.asset
+    │               │       ├── Text
+    │               │       │   └── Dream Property
+    │               │       └── Banner Indicators
+    │               │
+    │               ├── Categories
+    │               │   └── ListView
+    │               │       └── ChoiceChip
+    │               │           ├── All
+    │               │           ├── House
+    │               │           ├── Apartment
+    │               │           ├── Villa
+    │               │           ├── Plot
+    │               │           └── Farm
+    │               │
+    │               ├── Recommended Properties
+    │               │   ├── Row
+    │               │   │   ├── Text
+    │               │   │   └── See All
+    │               │   └── ListView
+    │               │       └── Property Card
+    │               │           └── Column
+    │               │               ├── Image.asset
+    │               │               ├── Text
+    │               │               │   └── Property Name
+    │               │               ├── Row
+    │               │               │   ├── Location Icon
+    │               │               │   └── Text
+    │               │               │       └── Location
+    │               │               ├── Text
+    │               │               │   └── Price
+    │               │               └── Text
+    │               │                   └── Property Type
+    │               │
+    │               ├── Top Brokers
+    │               │   ├── Row
+    │               │   │   ├── Text
+    │               │   │   └── See All
+    │               │   └── ListView
+    │               │       └── Broker Card
+    │               │           └── Column
+    │               │               ├── CircleAvatar
+    │               │               ├── Verified Badge
+    │               │               ├── Text
+    │               │               │   └── Broker Name
+    │               │               └── Row
+    │               │                   ├── Star Icon
+    │               │                   └── Rating
+    │               │
+    │               ├── EstateX Services
+    │               │   ├── Row
+    │               │   │   ├── Text
+    │               │   │   └── See All
+    │               │   └── ListView
+    │               │       └── Service Card
+    │               │           ├── Icon
+    │               │           ├── Text
+    │               │           │   └── Service Title
+    │               │           └── Text
+    │               │               └── Subtitle
+    │               │
+    │               ├── Property Price Comparison
+    │               │   ├── Row
+    │               │   │   ├── Text
+    │               │   │   └── Compare
+    │               │   └── Compare Property Prices Card
+    │               │
+    │               ├── Nearby Property Finder
+    │               │   ├── Row
+    │               │   │   ├── Text
+    │               │   │   └── Explore
+    │               │   └── Find Properties Near You Card
+    │               │
+    │               └── Upcoming Features
+    │                   ├── Row
+    │                   │   ├── Text
+    │                   │   └── Coming Soon
+    │                   └── ListView
+    │                       └── Feature Card
+    │                           ├── Icon
+    │                           ├── Text
+    │                           │   └── Feature Title
+    │                           └── Text
+    │                               └── Subtitle
+    │
+    └── BottomNavbar
+        ├── Home
+        ├── Search
+        ├── Wishlist
+        ├── Visits
+        └── Profile
+
+
+
+
+
+
+2) Property Details Page
+PropertyDetailsPage
+└── Scaffold
+    ├── AppBar
+    │   ├── IconButton
+    │   │   └── Icon (arrow_back)
+    │   └── Text (Property Details)
+    │
+    └── Body
+        └── SafeArea
+            └── SingleChildScrollView
+                └── Padding
+                    └── Column
+                        ├── Property Image
+                        │   └── ClipRRect
+                        │       └── Image.asset
+                        │
+                        ├── Property Information
+                        │   └── Column
+                        │       ├── Text (Property Name)
+                        │       ├── Text (Property Type)
+                        │       ├── Row
+                        │       │   ├── Icon (location_on)
+                        │       │   └── Text (Location)
+                        │       └── Text (Price)
+                        │
+                        ├── Property Overview
+                        │   └── Card
+                        │       └── Column
+                        │           ├── Text (Property Overview)
+                        │           ├── Row
+                        │           │   ├── Text (Property Type)
+                        │           │   └── Text (Type Value)
+                        │           ├── Row
+                        │           │   ├── Text (Location)
+                        │           │   └── Text (Location Value)
+                        │           └── Row
+                        │               ├── Text (Status)
+                        │               └── Text (Status Value)
+                        │
+                        ├── Description
+                        │   └── Column
+                        │       ├── Text (Description)
+                        │       └── Text (Property Description)
+                        │
+                        ├── Property Verification
+                        │   └── Card
+                        │       └── Row
+                        │           ├── Icon (verified)
+                        │           └── Column
+                        │               ├── Text (Property Verified)
+                        │               └── Text (Verification Message)
+                        │
+                        └── Action Buttons
+                            └── Row
+                                ├── Expanded
+                                │   └── OutlinedButton
+                                │       ├── Icon (favorite_border)
+                                │       └── Text (Wishlist)
+                                │
+                                └── Expanded
+                                    └── ElevatedButton
+                                        ├── Icon (calendar_month)
+                                        └── Text (Book Visit)
+
+
+
+
+
+3)  SearchPage
+    └── Scaffold
+    ├── AppBar
+    │   ├── Text (Find Your Property)
+    │   └── IconButton (Notification)
+    │
+    ├── Body
+    │   └── Column
+    │       ├── Search & Filter
+    │       │   ├── TextField (Search)
+    │       │   └── IconButton (Filter)
+    │       │
+    │       ├── Property Result Header
+    │       │   ├── Text (Properties Found)
+    │       │   └── InkWell (Sort)
+    │       │
+    │       └── GridView.builder
+    │           └── Property Card
+    │               ├── Stack
+    │               │   ├── Image.asset
+    │               │   ├── Favorite Icon
+    │               │   └── Property Type Badge
+    │               └── Column
+    │                   ├── Text (Property Name)
+    │                   ├── Row (Location Icon + Location)
+    │                   └── Text (Price)
+    │
+    └── BottomNavbar
+        ├── Home
+        ├── Search
+        ├── Wishlist
+        ├── Visits
+        └── Profile
+
+
+
+4) Wishlist Page
+WishlistPage
+└── Scaffold
+    ├── AppBar
+    │   ├── Text (Wishlist)
+    │   └── IconButton (Notification)
+    │
+    ├── Body
+    │   ├── Empty Wishlist
+    │   │   └── Center
+    │   │       └── Column
+    │   │           ├── Icon (Favorite Border)
+    │   │           ├── Text (No Properties in Wishlist)
+    │   │           └── Text (Saved Properties Message)
+    │   │
+    │   └── ListView.builder
+    │       └── Wishlist Property Card
+    │           ├── Row
+    │           │   ├── Image.asset
+    │           │   └── Column
+    │           │       ├── Row (Property Name + Delete Icon)
+    │           │       ├── Row (Location Icon + Location)
+    │           │       ├── Text (Price)
+    │           │       └── Text (Property Type)
+    │           ├── Divider
+    │           ├── Row
+    │           │   ├── CircleAvatar (Broker Image)
+    │           │   └── Column
+    │           │       ├── Text (Broker Name)
+    │           │       └── Row (Verified + Rating)
+    │           └── ElevatedButton.icon (Book Property Visit)
+    │
+    └── BottomNavbar
+        ├── Home
+        ├── Search
+        ├── Wishlist
+        ├── Visits
+        └── Profile
+
+
+VisitBookingFormPage
+└── Scaffold
+    ├── AppBar
+    │   ├── IconButton (Back)
+    │   └── Text (Book Property Visit)
+    │
+    └── Body
+        └── Form
+            └── ListView
+                ├── Property Summary Card
+                │   └── Row (Property Image + Name + Location + Price)
+                │
+                ├── Broker Information Card
+                │   └── Row (Broker Image + Name + Verification + Rating)
+                │
+                ├── Visitor Details
+                │   ├── TextFormField (Visitor Name)
+                │   └── TextFormField (Mobile Number)
+                │
+                ├── Visit Schedule
+                │   ├── Date Selector
+                │   └── Wrap
+                │       └── ChoiceChip (Available Time Slots)
+                │
+                ├── Number of Visitors
+                │   └── Row (Decrease + Count + Increase)
+                │
+                ├── Purpose of Visit
+                │   └── Wrap
+                │       └── ChoiceChip (Buying / Investment / Other)
+                │
+                ├── TextFormField (Message / Note)
+                │
+                ├── Contact Method
+                │   └── Wrap
+                │       └── ChoiceChip (Call / WhatsApp / App)
+                │
+                ├── Row (Checkbox + Terms)
+                │
+                └── ElevatedButton (Confirm Visit Booking)
+                    └── AlertDialog
+                        ├── Icon (Success)
+                        ├── Text (Visit Requested)
+                        ├── Text (Confirmation Message)
+                        └── TextButton (Done)
+
+
+
+
+6) Visits Page
+
+VisitsPage
+└── Scaffold
+    ├── AppBar
+    │   ├── Text (My Visits)
+    │   └── IconButton (Notification)
+    │
+    ├── Body
+    │   ├── Empty Visits State
+    │   │   └── Center
+    │   │       └── Column
+    │   │           ├── Icon (Calendar)
+    │   │           ├── Text (No Property Visits)
+    │   │           └── Text (Booked Visits Message)
+    │   │
+    │   └── ListView.builder
+    │       └── Visit Card
+    │           ├── Row
+    │           │   ├── Image.asset
+    │           │   └── Column
+    │           │       ├── Text (Property Name)
+    │           │       ├── Row (Location + Location Icon)
+    │           │       ├── Text (Price)
+    │           │       └── Text (Visit Status)
+    │           │
+    │           ├── Row (Visit Date + Visit Time)
+    │           ├── Row (Broker Image + Broker Name + Visitors)
+    │           ├── OutlinedButton (Broker Details)
+    │           ├── Row
+    │           │   ├── OutlinedButton (Reschedule)
+    │           │   └── OutlinedButton (Cancel Visit)
+    │           ├── Completed Visit
+    │           │   └── ElevatedButton (Start Deal)
+    │           └── Pending Visit
+    │               └── Text (Waiting for Broker Confirmation)
+    │
+    ├── showModalBottomSheet (Broker Details)
+    │   └── Column
+    │       ├── CircleAvatar (Broker Image)
+    │       ├── Text (Broker Name)
+    │       ├── Row (Verified + Rating)
+    │       ├── Broker Information (Phone + Email + Property)
+    │       └── Row
+    │           ├── OutlinedButton (Call)
+    │           └── ElevatedButton (Message)
+    │
+    ├── AlertDialog (Cancel Visit Confirmation)
+    │   ├── Text (Cancel Visit?)
+    │   ├── Text (Confirmation Message)
+    │   └── Actions (No + Cancel Visit)
+    │
+    └── BottomNavbar
+        ├── Home
+        ├── Search
+        ├── Wishlist
+        ├── Visits
+        └── Profile
+
+
+
+
+
+
+
+
+
+6) Profile Page
+
+ProfilePage
+└── Scaffold
+    ├── AppBar
+    │   ├── Text (Profile)
+    │   └── IconButton (Notification)
+    │
+    ├── Body
+    │   └── SingleChildScrollView
+    │       └── Column
+    │           ├── Profile Header
+    │           │   └── Row
+    │           │       ├── Stack (Profile Image + Edit Badge)
+    │           │       ├── Column (Name + Email + Verified Buyer)
+    │           │       └── IconButton (Arrow Forward) 
+    │           │
+    │           ├── Statistics
+    │           │   └── Row
+    │           │       ├── Stat Item (Wishlist: 4)
+    │           │       ├── Divider
+    │           │       ├── Stat Item (Visits: 1)
+    │           │       └── Stat Item (Viewed: 12)
+    │           │
+    │           ├── Account
+    │           │   ├── Menu Card (Edit Profile)
+    │           │   ├── Menu Card (Change Password)
+    │           │   └── Menu Card (Notifications)
+    │           │
+    │           ├── Support & Information
+    │           │   ├── Menu Card (Help & Support)
+    │           │   ├── Menu Card (About EstateX)
+    │           │   └── Menu Card (Privacy Policy)
+    │           │
+    │           └── OutlinedButton.icon (Logout)
+    │
+    ├── Edit Profile Bottom Sheet
+    │   └── showModalBottomSheet
+    │       └── Column
+    │           ├── Text (Profile Details)
+    │           ├── Stack (Profile Image + Camera Icon)
+    │           ├── TextField (Full Name)
+    │           ├── TextField (Email Address)
+    │           ├── TextField (Phone Number)
+    │           ├── TextField (Location)
+    │           ├── ElevatedButton (Save Changes)
+    │           └── Text (Editing Unavailable Message)
+    │
+    ├── Logout Dialog
+    │   └── AlertDialog
+    │       ├── Text (Logout Confirmation)
+    │       └── Row (Cancel + Logout)
+    │
+    └── BottomNavbar
+        ├── Home
+        ├── Search
+        ├── Wishlist
+        ├── Visits
+        └── Profile
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Admin Admin Admin Admin Admin Admin Admin Admin Admin Admin 
+
+8) Admin Home Page
+
+AdminHomePage
+└── Scaffold
+    ├── AppBar
+    │   ├── Row
+    │   │   ├── Admin Icon
+    │   │   └── Column
+    │   │       ├── Text → EstateX
+    │   │       └── Text → Admin Panel
+    │   └── IconButton
+    │       └── Notification Icon
+    │
+    ├── Body
+    │   └── SafeArea
+    │       └── SingleChildScrollView
+    │           └── Column
+    │               ├── Dashboard Header
+    │               │   ├── Text → Dashboard
+    │               │   └── Text → Manage and monitor your EstateX platform
+    │               │
+    │               ├── Statistics
+    │               │   ├── Row
+    │               │   │   ├── Stat Card → Buyers → 1,248
+    │               │   │   └── Stat Card → Brokers → 186
+    │               │   └── Row
+    │               │       ├── Stat Card → Properties → 3,426
+    │               │       └── Stat Card → Verified → 2,918
+    │               │
+    │               ├── Quick Overview
+    │               │   ├── Text → Quick Overview
+    │               │   ├── Overview Card → Pending Verification → 508
+    │               │   ├── Overview Card → Open Reports → 24
+    │               │   └── Overview Card → Inactive Accounts → 37
+    │               │
+    │               └── Recent Activity
+    │                   ├── Text → Recent Activity
+    │                   ├── Activity Tile → New property listed
+    │                   ├── Activity Tile → New broker registered
+    │                   └── Activity Tile → Property verified
+    │
+    └── AdminBottomNavbar
+        ├── Dashboard
+        ├── Users
+        ├── Properties
+        ├── Visits
+        └── Profile
+
+
+
+
+
+	9) Admin Users Page
+
+AdminUsersPage
+└── Scaffold
+    ├── AppBar
+    │   ├── Column
+    │   │   ├── Text → Users
+    │   │   └── Text → Manage platform users
+    │   └── IconButton
+    │       └── Refresh Icon
+    │
+    ├── Body
+    │   └── Column
+    │       ├── TextField
+    │       │   ├── Search Icon
+    │       │   ├── Hint → Search user, email or location
+    │       │   └── Clear Icon
+    │       │
+    │       ├── ListView
+    │       │   └── Filter Chips
+    │       │       ├── All
+    │       │       ├── Active
+    │       │       ├── Inactive
+    │       │       └── Blocked
+    │       │
+    │       └── ListView.separated
+    │           └── User Card
+    │               └── InkWell
+    │                   └── Row
+    │                       ├── CircleAvatar
+    │                       │   └── User Initial
+    │                       ├── Expanded
+    │                       │   └── Column
+    │                       │       ├── Text → User Name
+    │                       │       ├── Text → Email
+    │                       │       └── Row
+    │                       │           ├── Location
+    │                       │           └── Properties Bought
+    │                       └── Column
+    │                           ├── Status Badge
+    │                           └── Chevron Icon
+    │
+    ├── User Details Bottom Sheet
+    │   └── SingleChildScrollView
+    │       └── Column
+    │           ├── User Header
+    │           │   ├── CircleAvatar
+    │           │   ├── User Name
+    │           │   ├── Email
+    │           │   ├── Phone
+    │           │   └── Status Badge
+    │           │
+    │           ├── Purchase Summary
+    │           │   └── GridView
+    │           │       ├── Properties Bought
+    │           │       ├── Total Spent
+    │           │       ├── Active Bookings
+    │           │       └── Completed Visits
+    │           │
+    │           ├── User Activity
+    │           │   ├── Properties Viewed
+    │           │   ├── Visits Booked
+    │           │   ├── Wishlist Properties
+    │           │   └── Cancelled Visits
+    │           │
+    │           ├── Purchased Properties
+    │           │   └── Property List
+    │           │
+    │           ├── Recent Visits
+    │           │   └── ListTile
+    │           │       ├── Location Icon
+    │           │       ├── Property Name
+    │           │       └── Property Visit
+    │           │
+    │           ├── Account Information
+    │           │   ├── Location
+    │           │   ├── Joined
+    │           │   ├── Profile Verified
+    │           │   └── Account Status
+    │           │
+    │           └── Account Control
+    │               ├── OutlinedButton
+    │               │   └── Block / Unblock User
+    │               └── ElevatedButton
+    │                   └── Remove
+    │
+    ├── Remove User Dialog
+    │   └── AlertDialog
+    │       ├── Text → Remove User
+    │       ├── Text → Confirmation Message
+    │       └── Actions
+    │           ├── TextButton → Cancel
+    │           └── ElevatedButton → Remove
+    │
+    └── AdminBottomNavbar
+        ├── Dashboard
+        ├── Users
+        ├── Properties
+        ├── Visits
+        └── Profile
+
+
+
+
+
+10) Admin Brokers Page
+
+AdminBrokersPage
+└── Scaffold
+    ├── AppBar
+    │   └── Column
+    │       ├── Text → Brokers
+    │       └── Text → Manage brokers and verify documents
+    │
+    ├── Body
+    │   └── SafeArea
+    │       └── StreamBuilder
+    │           └── Column
+    │               ├── Search & Filters
+    │               │   ├── TextField
+    │               │   │   ├── Search Icon
+    │               │   │   ├── Hint → Search broker, agency, city or ID
+    │               │   │   └── Clear Icon
+    │               │   │
+    │               │   └── ListView
+    │               │       └── Filter Chips
+    │               │           ├── All
+    │               │           ├── Needs Review
+    │               │           ├── Approved
+    │               │           ├── Changes Requested
+    │               │           └── Rejected
+    │               │
+    │               └── Broker List
+    │                   └── ListView.builder
+    │                       └── Broker Card
+    │                           └── Column
+    │                               ├── Row
+    │                               │   ├── Broker Initial
+    │                               │   ├── Expanded
+    │                               │   │   └── Column
+    │                               │   │       ├── Broker Name
+    │                               │   │       └── Row
+    │                               │   │           ├── City
+    │                               │   │           └── Broker ID
+    │                               │   └── Chevron Icon
+    │                               │
+    │                               ├── Row
+    │                               │   ├── Properties
+    │                               │   ├── Deals
+    │                               │   └── Experience
+    │                               │
+    │                               ├── Row
+    │                               │   ├── Verification Status
+    │                               │   └── Account Status
+    │                               │
+    │                               └── Pending Review Box
+    │                                   ├── Verification Required
+    │                                   └── Review
+    │
+    ├── Broker Details Bottom Sheet
+    │   └── SafeArea
+    │       └── Column
+    │           ├── Broker Header
+    │           │   ├── Broker Initial
+    │           │   ├── Broker Name
+    │           │   ├── Broker ID
+    │           │   └── Verification Status
+    │           │
+    │           └── SingleChildScrollView
+    │               └── Column
+    │                   ├── Broker Overview
+    │                   │   ├── Email
+    │                   │   ├── Phone
+    │                   │   ├── City
+    │                   │   ├── Broker ID
+    │                   │   └── Joined
+    │                   │
+    │                   ├── Professional Details
+    │                   │   ├── Agency
+    │                   │   ├── Office
+    │                   │   ├── Experience
+    │                   │   ├── Properties
+    │                   │   └── Completed Deals
+    │                   │
+    │                   ├── Verification Documents
+    │                   │   ├── Document Progress
+    │                   │   └── Document Card
+    │                   │       ├── Document Name
+    │                   │       ├── File Details
+    │                   │       ├── Status
+    │                   │       └── View
+    │                   │
+    │                   ├── Verification Checklist
+    │                   │   ├── License Verified
+    │                   │   ├── Identity Verified
+    │                   │   ├── Address Verified
+    │                   │   ├── Business Details Verified
+    │                   │   └── Office Address Verified
+    │                   │
+    │                   ├── Admin Verification Note
+    │                   │   └── TextField
+    │                   │
+    │                   └── Account Control
+    │                       └── OutlinedButton
+    │                           └── Block / Unblock Broker
+    │
+    ├── Verification Actions
+    │   ├── Request Correction
+    │   ├── Approve Broker
+    │   └── Reject Broker
+    │
+    ├── Document Preview Dialog
+    │   └── AlertDialog
+    │       ├── Document Name
+    │       ├── Document Preview
+    │       ├── Document Status
+    │       └── TextButton → Close
+    │
+    └── AdminBottomNavbar
+        ├── Dashboard
+        ├── Users
+        ├── Properties
+        ├── Visits
+        └── Profile
+
+
+
+
+
+
+
+
+
+AdminPropertiesPage
+└── Scaffold
+    ├── AppBar
+    │   └── Column
+    │       ├── Properties
+    │       └── Review properties and documents
+    │
+    ├── Body
+    │   └── SafeArea
+    │       └── Column
+    │           ├── Search & Filters
+    │           │   ├── TextField
+    │           │   └── Filter Chips
+    │           │       ├── All
+    │           │       ├── Needs Review
+    │           │       ├── Approved
+    │           │       ├── Changes Requested
+    │           │       └── Rejected
+    │           │
+    │           └── Property List
+    │               └── Property Card
+    │                   ├── Property Info
+    │                   ├── Price / Area / Type
+    │                   ├── Verification & Status
+    │                   ├── Broker Info
+    │                   └── Review Button
+    │
+    ├── Empty State
+    │   └── No properties found
+    │
+    ├── Property Details Bottom Sheet
+    │   ├── Property Information
+    │   ├── Owner Details
+    │   ├── Broker Details
+    │   ├── Verification Documents
+    │   ├── Verification Checklist
+    │   ├── Admin Note
+    │   ├── Enable / Disable Property
+    │   └── Actions
+    │       ├── Request Correction
+    │       ├── Approve
+    │       └── Reject
+    │
+    ├── Document Preview Dialog
+    │   ├── Document Info
+    │   ├── Preview
+    │   └── Close
+    │
+    └── AdminBottomNavbar
+        ├── Dashboard
+        ├── Users
+        ├── Properties
+        ├── Visits
+        └── Profile
+
+
+
+
+
+9) Admin Profile Page
+
+AdminProfilePage
+└── Scaffold
+    ├── AppBar
+    │   └── Column
+    │       ├── Text
+    │       │   └── Admin Profile
+    │       └── Text
+    │           └── Manage account and system
+    │
+    ├── Body
+    │   └── SingleChildScrollView
+    │       └── Column
+    │           ├── Profile Card
+    │           │   ├── CircleAvatar
+    │           │   │   └── Admin Icon
+    │           │   ├── Text
+    │           │   │   └── EstateX Admin
+    │           │   ├── Text
+    │           │   │   └── admin@estatex.com
+    │           │   └── Text
+    │           │       └── Administrator
+    │           │
+    │           ├── Account
+    │           │   ├── Personal Information
+    │           │   └── Change Password
+    │           │
+    │           ├── System
+    │           │   ├── Reports & Complaints
+    │           │   ├── Analytics & Statistics
+    │           │   └── Notifications
+    │           │       └── Switch
+    │           │
+    │           ├── Other
+    │           │   ├── About EstateX
+    │           │   └── Help & Support
+    │           │
+    │           └── Logout
+    │               └── OutlinedButton.icon
+    │
+    ├── Personal Information
+    │   └── showModalBottomSheet
+    │       └── Column
+    │           ├── Text
+    │           │   └── Personal Information
+    │           └── Info Rows
+    │               ├── Name
+    │               ├── Email
+    │               ├── Role
+    │               └── Status
+    │
+    ├── Change Password
+    │   └── showModalBottomSheet
+    │       └── Column
+    │           ├── Text
+    │           │   └── Change Password
+    │           ├── TextField
+    │           │   └── New Password
+    │           ├── TextField
+    │           │   └── Confirm Password
+    │           └── ElevatedButton
+    │               └── Update Password
+    │
+    ├── Reports & Complaints
+    │   └── showModalBottomSheet
+    │       ├── Report Summary
+    │       │   ├── Open
+    │       │   └── Resolved
+    │       └── Report Items
+    │           ├── Property Document Issue
+    │           ├── Broker Behaviour Complaint
+    │           └── Incorrect Property Information
+    │
+    ├── Analytics & Statistics
+    │   └── showModalBottomSheet
+    │       └── List
+    │           ├── Total Users
+    │           ├── Total Brokers
+    │           ├── Total Properties
+    │           ├── Properties Sold
+    │           ├── Visits Completed
+    │           └── Verified Properties
+    │
+    ├── About EstateX
+    │   └── AlertDialog
+    │       ├── Text
+    │       │   └── About EstateX
+    │       ├── Text
+    │       │   └── Version 1.0.0
+    │       └── TextButton
+    │           └── Close
+    │
+    ├── Help & Support
+    │   └── AlertDialog
+    │       ├── Text
+    │       │   └── Help & Support
+    │       └── TextButton
+    │           └── Close
+    │
+    ├── Logout Dialog
+    │   └── AlertDialog
+    │       ├── Text
+    │       │   └── Logout
+    │       ├── Text
+    │       │   └── Are you sure you want to logout?
+    │       └── Actions
+    │           ├── Cancel
+    │           └── Logout
+    │
+    └── AdminBottomNavbar
+        ├── Dashboard
+        ├── Users
+        ├── Properties
+        ├── Visits
+        └── Profile
