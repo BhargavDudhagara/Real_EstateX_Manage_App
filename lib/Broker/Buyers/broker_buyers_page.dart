@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:app/theme/app_colors.dart';
 import 'package:app/utils/routes.dart';
 import 'package:app/widgets/broker_bottom_navbar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BrokerBuyersPage extends StatefulWidget {
   const BrokerBuyersPage({super.key});
@@ -15,97 +18,133 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
 
   String selectedFilter = "All";
 
-  final List<Map<String, dynamic>> buyers = [
-    {
-      "id": "BUY001",
-      "name": "Bhargav Patel",
-      "phone": "+91 98765 43210",
-      "email": "bhargav@example.com",
-      "location": "Rajkot, Gujarat",
-      "status": "Active",
-      "interest": "High",
-      "property": "Modern Family House",
-      "propertyType": "House",
-      "budget": "₹70 Lakh - ₹1 Cr",
-      "lastContact": "27 Sep 2026",
-      "visits": 3,
-      "inquiries": 5,
-      "image": "assets/House.png",
-      "note": "Looking for a family house in Rajkot.",
-    },
-    {
-      "id": "BUY002",
-      "name": "Rahul Shah",
-      "phone": "+91 98765 11223",
-      "email": "rahul@example.com",
-      "location": "Ahmedabad, Gujarat",
-      "status": "Active",
-      "interest": "High",
-      "property": "Premium City Apartment",
-      "propertyType": "Apartment",
-      "budget": "₹60 Lakh - ₹90 Lakh",
-      "lastContact": "26 Sep 2026",
-      "visits": 2,
-      "inquiries": 4,
-      "image": "assets/Apartment.png",
-      "note": "Interested in a furnished apartment.",
-    },
-    {
-      "id": "BUY003",
-      "name": "Amit Joshi",
-      "phone": "+91 98765 77889",
-      "email": "amit@example.com",
-      "location": "Gandhinagar, Gujarat",
-      "status": "Active",
-      "interest": "Medium",
-      "property": "Premium Garden Villa",
-      "propertyType": "Villa",
-      "budget": "₹1 Cr - ₹1.5 Cr",
-      "lastContact": "24 Sep 2026",
-      "visits": 1,
-      "inquiries": 3,
-      "image": "assets/Vila.png",
-      "note": "Looking for a premium villa.",
-    },
-    {
-      "id": "BUY004",
-      "name": "Neha Mehta",
-      "phone": "+91 98765 33445",
-      "email": "neha@example.com",
-      "location": "Rajkot, Gujarat",
-      "status": "Inactive",
-      "interest": "Low",
-      "property": "Green Valley Farm",
-      "propertyType": "Farm",
-      "budget": "₹80 Lakh - ₹1.2 Cr",
-      "lastContact": "18 Sep 2026",
-      "visits": 1,
-      "inquiries": 2,
-      "image": "assets/farm.png",
-      "note": "Looking for a farm property.",
-    },
-    {
-      "id": "BUY005",
-      "name": "Karan Desai",
-      "phone": "+91 98765 55667",
-      "email": "karan@example.com",
-      "location": "Rajkot, Gujarat",
-      "status": "Active",
-      "interest": "Medium",
-      "property": "Modern Family House",
-      "propertyType": "House",
-      "budget": "₹50 Lakh - ₹80 Lakh",
-      "lastContact": "22 Sep 2026",
-      "visits": 2,
-      "inquiries": 2,
-      "image": "assets/House1.png",
-      "note": "Looking for an affordable family home.",
-    },
-  ];
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  List<Map<String, dynamic>> buyers = [];
+  bool isLoading = true;
+  StreamSubscription<QuerySnapshot>? _buyersSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupBuyersListener();
+  }
+
+  void _setupBuyersListener() {
+    setState(() {
+      isLoading = true;
+    });
+
+    _buyersSubscription = _firestore
+        .collection('users')
+        .where('role', isEqualTo: 'Buyer')
+        .snapshots(includeMetadataChanges: false)
+        .listen(
+          (snapshot) {
+            if (mounted) {
+              setState(() {
+                buyers = snapshot.docs.map((doc) {
+                  final data = doc.data();
+                  final createdAt = data['createdAt'] as Timestamp?;
+
+                  String lastContact = 'N/A';
+                  if (createdAt != null) {
+                    final date = createdAt.toDate();
+                    lastContact =
+                        '${date.day} ${_getMonthName(date.month)} ${date.year}';
+                  }
+
+                  return {
+                    "id": data['uid'] ?? doc.id,
+                    "name": data['name'] ?? 'Unknown',
+                    "phone": data['phone'] ?? 'No phone',
+                    "email": data['email'] ?? 'No email',
+                    "location": data['location'] ?? 'Unknown',
+                    "status": data['status'] ?? 'Active',
+                    "interest": _mapActivityToInterest(data),
+                    "property": data['interestedProperty'] ?? 'Not specified',
+                    "propertyType": data['propertyType'] ?? 'Not specified',
+                    "budget": data['budget'] ?? 'Not specified',
+                    "lastContact": lastContact,
+                    "visits": data['visitsBooked'] ?? 0,
+                    "inquiries": data['propertiesViewed'] ?? 0,
+                    "image": data['profileImage'] ?? '',
+                    "note": _generateNote(data),
+                    "purchasedProperties": data['purchasedProperties'] ?? [],
+                  };
+                }).toList();
+                isLoading = false;
+              });
+            }
+          },
+          onError: (e) {
+            if (mounted) {
+              setState(() {
+                isLoading = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error loading buyers: $e'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+          },
+        );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return months[month - 1];
+  }
+
+  String _mapActivityToInterest(Map<String, dynamic> data) {
+    final visits = data['visitsBooked'] ?? 0;
+    final viewed = data['propertiesViewed'] ?? 0;
+    final wishlist = data['wishlist'] ?? 0;
+
+    final totalActivity = visits + viewed + wishlist;
+    if (totalActivity >= 10) return 'High';
+    if (totalActivity >= 5) return 'Medium';
+    return 'Low';
+  }
+
+  String _generateNote(Map<String, dynamic> data) {
+    final location = data['location'] ?? 'Unknown location';
+    final joined = data['createdAt'] as Timestamp?;
+    if (joined != null) {
+      final date = joined.toDate();
+      return 'User from $location, joined in ${date.year}';
+    }
+    return 'User from $location';
+  }
+
+  Future<void> _refreshBuyers() async {
+    _buyersSubscription?.cancel();
+    buyers.clear();
+    setState(() {
+      isLoading = true;
+    });
+    _setupBuyersListener();
+  }
 
   @override
   void dispose() {
     searchController.dispose();
+    _buyersSubscription?.cancel();
     super.dispose();
   }
 
@@ -115,15 +154,16 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
     return buyers.where((buyer) {
       final matchesSearch =
           buyer["name"].toString().toLowerCase().contains(query) ||
-          buyer["property"].toString().toLowerCase().contains(query) ||
+          buyer["email"].toString().toLowerCase().contains(query) ||
           buyer["location"].toString().toLowerCase().contains(query);
 
       bool matchesFilter = true;
 
       if (selectedFilter == "Active") {
         matchesFilter = buyer["status"] == "Active";
-      } else if (selectedFilter == "Inactive") {
-        matchesFilter = buyer["status"] == "Inactive";
+      } else if (selectedFilter == "Inactive/Blocked") {
+        matchesFilter =
+            buyer["status"] == "Inactive" || buyer["status"] == "Blocked";
       } else if (selectedFilter == "High") {
         matchesFilter = buyer["interest"] == "High";
       } else if (selectedFilter == "Medium") {
@@ -169,23 +209,29 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
 
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: AppColors.primary.withValues(
-                          alpha: 0.10,
-                        ),
-                        child: Text(
-                          buyer["name"]
-                              .toString()
-                              .substring(0, 1)
-                              .toUpperCase(),
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
+                      buyer["image"] != null &&
+                              buyer["image"].toString().isNotEmpty
+                          ? CircleAvatar(
+                              radius: 30,
+                              backgroundImage: NetworkImage(buyer["image"]),
+                            )
+                          : CircleAvatar(
+                              radius: 30,
+                              backgroundColor: AppColors.primary.withValues(
+                                alpha: 0.10,
+                              ),
+                              child: Text(
+                                buyer["name"]
+                                    .toString()
+                                    .substring(0, 1)
+                                    .toUpperCase(),
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
@@ -220,14 +266,14 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
                     title: "Contact Information",
                     children: [
                       _buildDetailRow(
-                        Icons.phone_outlined,
-                        "Phone",
-                        buyer["phone"],
-                      ),
-                      _buildDetailRow(
                         Icons.email_outlined,
                         "Email",
                         buyer["email"],
+                      ),
+                      _buildDetailRow(
+                        Icons.phone_outlined,
+                        "Phone",
+                        buyer["phone"],
                       ),
                       _buildDetailRow(
                         Icons.location_on_outlined,
@@ -240,113 +286,90 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
                   const SizedBox(height: 18),
 
                   _buildDetailSection(
-                    title: "Requirement",
+                    title: "Property Interest",
                     children: [
                       _buildDetailRow(
                         Icons.home_work_outlined,
-                        "Property",
-                        buyer["property"],
-                      ),
-                      _buildDetailRow(
-                        Icons.category_outlined,
                         "Property Type",
                         buyer["propertyType"],
+                      ),
+                      _buildDetailRow(
+                        Icons.description_outlined,
+                        "Interested Property",
+                        buyer["property"],
                       ),
                       _buildDetailRow(
                         Icons.currency_rupee_rounded,
                         "Budget",
                         buyer["budget"],
                       ),
-                      _buildDetailRow(
-                        Icons.star_outline_rounded,
-                        "Interest",
-                        buyer["interest"],
-                      ),
                     ],
                   ),
 
                   const SizedBox(height: 18),
 
                   _buildDetailSection(
-                    title: "Activity",
+                    title: "Purchased Properties",
+                    children: [
+                      if (buyer["purchasedProperties"] != null &&
+                          (buyer["purchasedProperties"] as List).isNotEmpty)
+                        ...((buyer["purchasedProperties"] as List)
+                            .map<Widget>(
+                              (property) => Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.check_circle_outline,
+                                      size: 18,
+                                      color: AppColors.success,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        property.toString(),
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList())
+                      else
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6),
+                          child: Text(
+                            "No properties purchased yet",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  _buildDetailSection(
+                    title: "Account Details",
                     children: [
                       _buildDetailRow(
-                        Icons.calendar_month_outlined,
-                        "Last Contact",
+                        Icons.badge_outlined,
+                        "User ID",
+                        buyer["id"],
+                      ),
+                      _buildDetailRow(Icons.person_outline, "Role", "Buyer"),
+                      _buildDetailRow(
+                        Icons.calendar_today_outlined,
+                        "Joined",
                         buyer["lastContact"],
-                      ),
-                      _buildDetailRow(
-                        Icons.visibility_outlined,
-                        "Visits",
-                        buyer["visits"].toString(),
-                      ),
-                      _buildDetailRow(
-                        Icons.question_answer_outlined,
-                        "Inquiries",
-                        buyer["inquiries"].toString(),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  _buildDetailSection(
-                    title: "Broker Note",
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(
-                          buyer["note"],
-                          style: const TextStyle(
-                            fontSize: 14,
-                            height: 1.5,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.phone_outlined, size: 19),
-                          label: const Text("Call"),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                            side: const BorderSide(color: AppColors.primary),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.email_outlined, size: 19),
-                          label: const Text("Email"),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                            side: const BorderSide(color: AppColors.primary),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
                       ),
                     ],
                   ),
@@ -426,7 +449,19 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
   }
 
   Widget _buildStatusBadge(String status, {bool isSmall = true}) {
-    final bool active = status == "Active";
+    Color color;
+    Color bgColor;
+
+    if (status == "Active") {
+      color = AppColors.success;
+      bgColor = AppColors.success.withValues(alpha: 0.10);
+    } else if (status == "Blocked") {
+      color = AppColors.error;
+      bgColor = AppColors.error.withValues(alpha: 0.10);
+    } else {
+      color = AppColors.textSecondary;
+      bgColor = AppColors.textSecondary.withValues(alpha: 0.10);
+    }
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -434,43 +469,13 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
         vertical: isSmall ? 5 : 7,
       ),
       decoration: BoxDecoration(
-        color: active
-            ? AppColors.success.withValues(alpha: 0.10)
-            : AppColors.textSecondary.withValues(alpha: 0.10),
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         status,
         style: TextStyle(
           fontSize: isSmall ? 11 : 12,
-          fontWeight: FontWeight.w600,
-          color: active ? AppColors.success : AppColors.textSecondary,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInterestBadge(String interest) {
-    Color color;
-
-    if (interest == "High") {
-      color = AppColors.error;
-    } else if (interest == "Medium") {
-      color = AppColors.warning;
-    } else {
-      color = AppColors.textSecondary;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        "$interest Interest",
-        style: TextStyle(
-          fontSize: 10,
           fontWeight: FontWeight.w600,
           color: color,
         ),
@@ -496,18 +501,28 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 27,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.10),
-                  child: Text(
-                    buyer["name"].toString().substring(0, 1).toUpperCase(),
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 21,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+                buyer["image"] != null && buyer["image"].toString().isNotEmpty
+                    ? CircleAvatar(
+                        radius: 27,
+                        backgroundImage: NetworkImage(buyer["image"]),
+                      )
+                    : CircleAvatar(
+                        radius: 27,
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.10,
+                        ),
+                        child: Text(
+                          buyer["name"]
+                              .toString()
+                              .substring(0, 1)
+                              .toUpperCase(),
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -532,6 +547,26 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
                       Row(
                         children: [
                           const Icon(
+                            Icons.email_outlined,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              buyer["email"],
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          const Icon(
                             Icons.location_on_outlined,
                             size: 14,
                             color: AppColors.textSecondary,
@@ -548,8 +583,6 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 7),
-                      _buildInterestBadge(buyer["interest"]),
                     ],
                   ),
                 ),
@@ -564,40 +597,34 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.home_work_outlined,
-                    size: 19,
-                    color: AppColors.primary,
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.home_work_outlined,
+                        size: 17,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Interested in:",
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          buyer["property"],
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          buyer["budget"],
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
+                  const SizedBox(height: 6),
+                  Text(
+                    buyer["propertyType"],
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
                     ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.textSecondary,
                   ),
                 ],
               ),
@@ -605,57 +632,64 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
 
             const SizedBox(height: 12),
 
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMiniStat(
-                    Icons.calendar_month_outlined,
-                    "${buyer["visits"]}",
-                    "Visits",
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.shopping_bag_outlined,
+                        size: 17,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Purchased Properties:",
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                Expanded(
-                  child: _buildMiniStat(
-                    Icons.question_answer_outlined,
-                    "${buyer["inquiries"]}",
-                    "Inquiries",
-                  ),
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  if (buyer["purchasedProperties"] != null &&
+                      (buyer["purchasedProperties"] as List).isNotEmpty)
+                    ...((buyer["purchasedProperties"] as List)
+                        .take(3)
+                        .map<Widget>(
+                          (property) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              "• ${property.toString()}",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList())
+                  else
+                    const Text(
+                      "No properties purchased yet",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildMiniStat(IconData icon, String value, String label) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, size: 16, color: AppColors.textSecondary),
-        const SizedBox(width: 5),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 
@@ -728,13 +762,13 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final activeBuyers = buyers
-        .where((buyer) => buyer["status"] == "Active")
-        .length;
+    final activeBuyers = isLoading
+        ? 0
+        : buyers.where((buyer) => buyer["status"] == "Active").length;
 
-    final highInterestBuyers = buyers
-        .where((buyer) => buyer["interest"] == "High")
-        .length;
+    final highInterestBuyers = isLoading
+        ? 0
+        : buyers.where((buyer) => buyer["interest"] == "High").length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -778,7 +812,7 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
                   setState(() {});
                 },
                 decoration: const InputDecoration(
-                  hintText: "Search buyer, property or location",
+                  hintText: "Search buyer by name or email",
                   hintStyle: TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary,
@@ -805,7 +839,7 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
               children: [
                 _buildFilterChip("All"),
                 _buildFilterChip("Active"),
-                _buildFilterChip("Inactive"),
+                _buildFilterChip("Inactive/Blocked"),
                 _buildFilterChip("High"),
                 _buildFilterChip("Medium"),
                 _buildFilterChip("Low"),
@@ -823,7 +857,7 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
                 Expanded(
                   child: _buildSummaryCard(
                     title: "Total Buyers",
-                    value: "${buyers.length}",
+                    value: isLoading ? "-" : "${buyers.length}",
                     icon: Icons.people_outline_rounded,
                     color: AppColors.primary,
                   ),
@@ -832,7 +866,7 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
                 Expanded(
                   child: _buildSummaryCard(
                     title: "Active",
-                    value: "$activeBuyers",
+                    value: isLoading ? "-" : "$activeBuyers",
                     icon: Icons.person_outline_rounded,
                     color: AppColors.success,
                   ),
@@ -841,7 +875,7 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
                 Expanded(
                   child: _buildSummaryCard(
                     title: "High Interest",
-                    value: "$highInterestBuyers",
+                    value: isLoading ? "-" : "$highInterestBuyers",
                     icon: Icons.star_outline_rounded,
                     color: AppColors.accent,
                   ),
@@ -853,7 +887,9 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
           const SizedBox(height: 16),
 
           Expanded(
-            child: filteredBuyers.isEmpty
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : filteredBuyers.isEmpty
                 ? const Center(
                     child: Text(
                       "No buyers found",
@@ -863,12 +899,15 @@ class _BrokerBuyersPageState extends State<BrokerBuyersPage> {
                       ),
                     ),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                    itemCount: filteredBuyers.length,
-                    itemBuilder: (context, index) {
-                      return _buildBuyerCard(filteredBuyers[index]);
-                    },
+                : RefreshIndicator(
+                    onRefresh: _refreshBuyers,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                      itemCount: filteredBuyers.length,
+                      itemBuilder: (context, index) {
+                        return _buildBuyerCard(filteredBuyers[index]);
+                      },
+                    ),
                   ),
           ),
         ],

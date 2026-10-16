@@ -21,6 +21,14 @@ class _ProfilePageState extends State<ProfilePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Last saved values (used to restore fields if user closes without saving)
+  String _savedName = '';
+  String _savedPhone = '';
+  String _savedLocation = '';
+
+  bool _isSaving = false;
+  String? _editError;
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +51,10 @@ class _ProfilePageState extends State<ProfilePage> {
             emailController.text = data?['email'] ?? '';
             phoneController.text = data?['phone'] ?? '';
             locationController.text = data?['location'] ?? '';
+
+            _savedName = nameController.text;
+            _savedPhone = phoneController.text;
+            _savedLocation = locationController.text;
           });
         }
       }
@@ -60,195 +72,333 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 
+  // ==================== SAVE PROFILE ====================
+
+  Future<void> _saveProfile(
+    BuildContext sheetContext,
+    void Function(void Function()) setSheetState,
+  ) async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      setSheetState(() {
+        _editError = 'Session expired. Please login again.';
+      });
+      return;
+    }
+
+    final String name = nameController.text.trim();
+    final String phone = phoneController.text.trim();
+    final String location = locationController.text.trim();
+
+    if (name.isEmpty) {
+      setSheetState(() {
+        _editError = 'Full name cannot be empty.';
+      });
+      return;
+    }
+
+    if (phone.isNotEmpty && phone.length < 10) {
+      setSheetState(() {
+        _editError = 'Please enter a valid phone number.';
+      });
+      return;
+    }
+
+    setSheetState(() {
+      _isSaving = true;
+      _editError = null;
+    });
+
+    try {
+      await _firestore.collection('users').doc(user.uid).set({
+        'name': name,
+        'phone': phone,
+        'location': location,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      _savedName = name;
+      _savedPhone = phone;
+      _savedLocation = location;
+      _isSaving = false;
+
+      if (!mounted) return;
+
+      // Refresh profile header with the new values
+      setState(() {});
+
+      if (sheetContext.mounted) {
+        Navigator.pop(sheetContext);
+      }
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile updated successfully'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setSheetState(() {
+        _isSaving = false;
+        _editError = 'Could not update profile. Please try again.';
+      });
+    }
+  }
+
+  void _restoreSavedValues() {
+    nameController.text = _savedName;
+    phoneController.text = _savedPhone;
+    locationController.text = _savedLocation;
+    _isSaving = false;
+    _editError = null;
+  }
+
   // ==================== EDIT PROFILE ====================
 
   void showEditProfileDialog() {
+    _restoreSavedValues();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.78,
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: Column(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.border,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Profile Details',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.78,
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.border,
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                      ),
 
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded),
-                        color: AppColors.textSecondary,
-                      ),
-                    ],
-                  ),
+                        const SizedBox(height: 20),
 
-                  const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Profile Details',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
 
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 10),
+                            IconButton(
+                              onPressed: _isSaving
+                                  ? null
+                                  : () => Navigator.pop(context),
+                              icon: const Icon(Icons.close_rounded),
+                              color: AppColors.textSecondary,
+                            ),
+                          ],
+                        ),
 
-                          // ==================== PROFILE IMAGE ====================
-                          Stack(
-                            alignment: Alignment.bottomRight,
-                            children: [
-                              Container(
-                                width: 92,
-                                height: 92,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.08,
-                                  ),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.15,
+                        const SizedBox(height: 10),
+
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                const SizedBox(height: 10),
+
+                                // ==================== PROFILE IMAGE ====================
+                                Stack(
+                                  alignment: Alignment.bottomRight,
+                                  children: [
+                                    Container(
+                                      width: 92,
+                                      height: 92,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.08,
+                                        ),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: AppColors.primary.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                        ),
+                                      ),
+                                      child: ClipOval(
+                                        child: Image.asset(
+                                          'assets/Bhargav.png',
+                                          width: 76,
+                                          height: 76,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.primary,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.camera_alt_rounded,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 28),
+
+                                // ==================== NAME ====================
+                                _buildEditField(
+                                  controller: nameController,
+                                  label: 'Full Name',
+                                  icon: Icons.person_outline_rounded,
+                                  keyboardType: TextInputType.name,
+                                ),
+
+                                const SizedBox(height: 18),
+
+                                // ==================== EMAIL (READ ONLY) ====================
+                                _buildEditField(
+                                  controller: emailController,
+                                  label: 'Email Address',
+                                  icon: Icons.email_outlined,
+                                  readOnly: true,
+                                ),
+
+                                const SizedBox(height: 6),
+
+                                const Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    'Email cannot be changed here.',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11,
                                     ),
                                   ),
                                 ),
-                                child: ClipOval(
-                                  child: Image.asset(
-                                    'assets/Bhargav.png',
-                                    width: 76,
-                                    height: 76,
-                                    fit: BoxFit.cover,
+
+                                const SizedBox(height: 18),
+
+                                // ==================== PHONE ====================
+                                _buildEditField(
+                                  controller: phoneController,
+                                  label: 'Phone Number',
+                                  icon: Icons.phone_outlined,
+                                  keyboardType: TextInputType.phone,
+                                ),
+
+                                const SizedBox(height: 18),
+
+                                // ==================== LOCATION ====================
+                                _buildEditField(
+                                  controller: locationController,
+                                  label: 'Location',
+                                  icon: Icons.location_on_outlined,
+                                  keyboardType: TextInputType.streetAddress,
+                                ),
+
+                                const SizedBox(height: 22),
+
+                                if (_editError != null) ...[
+                                  Text(
+                                    _editError!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: AppColors.error,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+
+                                // ==================== SAVE BUTTON ====================
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 54,
+                                  child: ElevatedButton(
+                                    onPressed: _isSaving
+                                        ? null
+                                        : () => _saveProfile(
+                                            sheetContext,
+                                            setSheetState,
+                                          ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      disabledBackgroundColor: AppColors.border,
+                                      disabledForegroundColor:
+                                          AppColors.textSecondary,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                    ),
+                                    child: _isSaving
+                                        ? const SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.4,
+                                              color: AppColors.primary,
+                                            ),
+                                          )
+                                        : const Text(
+                                            'Save Changes',
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
                                   ),
                                 ),
-                              ),
 
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: const BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt_rounded,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 28),
-
-                          // ==================== NAME ====================
-                          _buildEditField(
-                            controller: nameController,
-                            label: 'Full Name',
-                            icon: Icons.person_outline_rounded,
-                          ),
-
-                          const SizedBox(height: 18),
-
-                          // ==================== EMAIL ====================
-                          _buildEditField(
-                            controller: emailController,
-                            label: 'Email Address',
-                            icon: Icons.email_outlined,
-                          ),
-
-                          const SizedBox(height: 18),
-
-                          // ==================== PHONE ====================
-                          _buildEditField(
-                            controller: phoneController,
-                            label: 'Phone Number',
-                            icon: Icons.phone_outlined,
-                          ),
-
-                          const SizedBox(height: 18),
-
-                          // ==================== LOCATION ====================
-                          _buildEditField(
-                            controller: locationController,
-                            label: 'Location',
-                            icon: Icons.location_on_outlined,
-                          ),
-
-                          const SizedBox(height: 28),
-
-                          // ==================== SAVE BUTTON DISABLED ====================
-                          SizedBox(
-                            width: double.infinity,
-                            height: 54,
-                            child: ElevatedButton(
-                              onPressed: null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                disabledBackgroundColor: AppColors.border,
-                                disabledForegroundColor:
-                                    AppColors.textSecondary,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                              child: const Text(
-                                'Save Changes',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                                const SizedBox(height: 20),
+                              ],
                             ),
                           ),
-
-                          const SizedBox(height: 12),
-
-                          const Text(
-                            'Profile editing is currently unavailable.',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 11,
-                            ),
-                          ),
-
-                          const SizedBox(height: 20),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
-    );
+    ).whenComplete(() {
+      // If the sheet was closed without saving, bring back the saved values
+      if (!mounted) return;
+      setState(() {
+        _restoreSavedValues();
+      });
+    });
   }
 
   // ==================== PROFILE FIELD ====================
@@ -257,6 +407,8 @@ class _ProfilePageState extends State<ProfilePage> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    bool readOnly = false,
+    TextInputType? keyboardType,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,8 +426,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
         TextField(
           controller: controller,
-          readOnly: true,
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+          readOnly: readOnly,
+          keyboardType: keyboardType,
+          style: TextStyle(
+            color: readOnly ? AppColors.textSecondary : AppColors.textPrimary,
+            fontSize: 15,
+          ),
           decoration: InputDecoration(
             prefixIcon: Icon(icon, color: AppColors.primary, size: 21),
             filled: true,
@@ -294,7 +450,9 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(13),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(
+                color: readOnly ? AppColors.border : AppColors.primary,
+              ),
             ),
           ),
         ),
@@ -484,7 +642,7 @@ class _ProfilePageState extends State<ProfilePage> {
             _buildMenuCard(
               icon: Icons.person_outline_rounded,
               title: 'Edit Profile',
-              subtitle: 'View your personal information',
+              subtitle: 'Update your personal information',
               onTap: showEditProfileDialog,
             ),
 

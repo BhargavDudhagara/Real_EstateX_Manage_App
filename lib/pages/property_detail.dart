@@ -588,7 +588,7 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
               _buildLabel("Inquiry Type"),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _inquiryType,
+                initialValue: _inquiryType,
                 decoration: _inputDecoration(
                   hint: "Select inquiry type",
                   icon: Icons.help_outline,
