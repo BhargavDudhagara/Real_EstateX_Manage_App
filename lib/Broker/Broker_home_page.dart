@@ -68,11 +68,11 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 color: AppColors.primary,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
-                Icons.business_rounded,
-                color: Colors.white,
-                size: 21,
-              ),
+              // child: const Icon(
+              //   Icons.business_rounded,
+              //   color: Colors.white,
+              //   size: 21,
+              // ),
             ),
             const SizedBox(width: 10),
             const Column(

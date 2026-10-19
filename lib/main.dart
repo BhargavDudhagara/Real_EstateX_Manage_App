@@ -105,76 +105,83 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
+    return PopScope(
+      canPop: false,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
 
-      theme: AppTheme.lightTheme,
-      themeMode: ThemeMode.light,
+        theme: AppTheme.lightTheme,
+        themeMode: ThemeMode.light,
 
-      // App ab Splash Screen se start hoga
-      home: const SplashScreen(),
+        // App ab Splash Screen se start hoga
+        home: const SplashScreen(),
 
-      routes: {
-        MyRoutes.buyerHomeRoute: (context) => BuyerHomePage(),
-        MyRoutes.brokerHomeRoute: (context) => const BrokerHomePage(),
-        MyRoutes.loginRoute: (context) => LoginPage(),
-        MyRoutes.registerRoute: (context) => RegisterPage(),
-        MyRoutes.forgotPasswordRoute: (context) => const ForgotPasswordPage(),
-        MyRoutes.resetPasswordRoute: (context) => const ResetPasswordPage(),
-        MyRoutes.searchRoute: (context) => const SearchPage(),
-        MyRoutes.wishlistRoute: (context) => const WishlistPage(),
-        MyRoutes.visitsRoute: (context) => const VisitsPage(),
-        MyRoutes.profileRoute: (context) => const profile.ProfilePage(),
-        MyRoutes.brokerVerificationRoute: (context) =>
-            const BrokerVerificationPage(),
-        MyRoutes.brokerPendingRoute: (context) => const BrokerPendingPage(),
-        MyRoutes.brokerPaymentRoute: (context) => const BrokerPaymentPage(),
-        MyRoutes.changePasswordRoute: (context) => const ChangePasswordPage(),
-        MyRoutes.helpSupportRoute: (context) => const HelpSupportPage(),
-        MyRoutes.aboutRoute: (context) => const AboutPage(),
-        MyRoutes.privacyPolicyRoute: (context) => const PrivacyPolicyPage(),
-        MyRoutes.notificationRoute: (context) => const NotificationPage(),
-        MyRoutes.buyerDealRequestRoute: (context) =>
-            const BuyerDealRequestPage(),
-        MyRoutes.buyerDealDocumentsRoute: (context) =>
-            const BuyerDealDocumentsPage(),
-        MyRoutes.buyerDealPaymentRoute: (context) =>
-            const BuyerDealPaymentPage(),
-        MyRoutes.priceComparisonRoute: (context) => const PriceComparisonPage(),
-        MyRoutes.nearbyPropertyRoute: (context) => const NearbyPropertyPage(),
-        MyRoutes.calculatorRoute: (context) => const CalculatorPage(),
-        MyRoutes.propertyDetailRoute: (context) => const PropertyDetailsPage(),
-        MyRoutes.splashRoute: (context) => const SplashScreen(),
-        MyRoutes.welcomeRoute: (context) => const WelcomePage(),
+        routes: {
+          MyRoutes.buyerHomeRoute: (context) => BuyerHomePage(),
+          MyRoutes.brokerHomeRoute: (context) => const BrokerHomePage(),
+          MyRoutes.loginRoute: (context) => LoginPage(),
+          MyRoutes.registerRoute: (context) => RegisterPage(),
+          MyRoutes.forgotPasswordRoute: (context) => const ForgotPasswordPage(),
+          MyRoutes.resetPasswordRoute: (context) => const ResetPasswordPage(),
+          MyRoutes.searchRoute: (context) => const SearchPage(),
+          MyRoutes.wishlistRoute: (context) => const WishlistPage(),
+          MyRoutes.visitsRoute: (context) => const VisitsPage(),
+          MyRoutes.profileRoute: (context) => const profile.ProfilePage(),
+          MyRoutes.brokerVerificationRoute: (context) =>
+              const BrokerVerificationPage(),
+          MyRoutes.brokerPendingRoute: (context) => const BrokerPendingPage(),
+          MyRoutes.brokerPaymentRoute: (context) => const BrokerPaymentPage(),
+          MyRoutes.changePasswordRoute: (context) => const ChangePasswordPage(),
+          MyRoutes.helpSupportRoute: (context) => const HelpSupportPage(),
+          MyRoutes.aboutRoute: (context) => const AboutPage(),
+          MyRoutes.privacyPolicyRoute: (context) => const PrivacyPolicyPage(),
+          MyRoutes.notificationRoute: (context) => const NotificationPage(),
+          MyRoutes.buyerDealRequestRoute: (context) =>
+              const BuyerDealRequestPage(),
+          MyRoutes.buyerDealDocumentsRoute: (context) =>
+              const BuyerDealDocumentsPage(),
+          MyRoutes.buyerDealPaymentRoute: (context) =>
+              const BuyerDealPaymentPage(),
+          MyRoutes.priceComparisonRoute: (context) =>
+              const PriceComparisonPage(),
+          MyRoutes.nearbyPropertyRoute: (context) => const NearbyPropertyPage(),
+          MyRoutes.calculatorRoute: (context) => const CalculatorPage(),
+          MyRoutes.propertyDetailRoute: (context) =>
+              const PropertyDetailsPage(),
+          MyRoutes.splashRoute: (context) => const SplashScreen(),
+          MyRoutes.welcomeRoute: (context) => const WelcomePage(),
 
-        // Admin
-        MyRoutes.adminHomeRoute: (context) => const AdminHomePage(),
-        MyRoutes.adminUsersRoute: (context) => const AdminUsersPage(),
-        MyRoutes.adminBrokersRoute: (context) => const AdminBrokersPage(),
-        MyRoutes.adminPropertiesRoute: (context) => const AdminPropertiesPage(),
-        MyRoutes.adminProfileRoute: (context) => const AdminProfilePage(),
+          // Admin
+          MyRoutes.adminHomeRoute: (context) => const AdminHomePage(),
+          MyRoutes.adminUsersRoute: (context) => const AdminUsersPage(),
+          MyRoutes.adminBrokersRoute: (context) => const AdminBrokersPage(),
+          MyRoutes.adminPropertiesRoute: (context) =>
+              const AdminPropertiesPage(),
+          MyRoutes.adminProfileRoute: (context) => const AdminProfilePage(),
 
-        // Broker
-        MyRoutes.brokerPropertiesRoute: (context) =>
-            const BrokerPropertiesPage(),
-        MyRoutes.addPropertyRoute: (context) => const AddPropertyPage(),
-        MyRoutes.propertyDetailsRoute: (context) => const PropertyDetailsPage(),
+          // Broker
+          MyRoutes.brokerPropertiesRoute: (context) =>
+              const BrokerPropertiesPage(),
+          MyRoutes.addPropertyRoute: (context) => const AddPropertyPage(),
+          MyRoutes.propertyDetailsRoute: (context) =>
+              const PropertyDetailsPage(),
 
-        // Visit
-        MyRoutes.brokerVisitsRoute: (context) => const BrokerVisitsPage(),
-        MyRoutes.visitDetailsRoute: (context) => const VisitDetailsPage(),
-        MyRoutes.brokerCalendarRoute: (context) => const BrokerCalendarPage(),
+          // Visit
+          MyRoutes.brokerVisitsRoute: (context) => const BrokerVisitsPage(),
+          MyRoutes.visitDetailsRoute: (context) => const VisitDetailsPage(),
+          MyRoutes.brokerCalendarRoute: (context) => const BrokerCalendarPage(),
 
-        // Broker Buyer
-        MyRoutes.brokerBuyersRoute: (context) => const BrokerBuyersPage(),
-        MyRoutes.brokerDealRequestsRoute: (context) =>
-            const BrokerDealRequestsPage(),
-        MyRoutes.brokerDealDetailsRoute: (context) =>
-            const BrokerDealDetailsPage(),
-        MyRoutes.brokerDocumentVerificationRoute: (context) =>
-            const BrokerDocumentVerificationPage(),
-        MyRoutes.brokerProfileRoute: (context) => const BrokerProfilePage(),
-      },
+          // Broker Buyer
+          MyRoutes.brokerBuyersRoute: (context) => const BrokerBuyersPage(),
+          MyRoutes.brokerDealRequestsRoute: (context) =>
+              const BrokerDealRequestsPage(),
+          MyRoutes.brokerDealDetailsRoute: (context) =>
+              const BrokerDealDetailsPage(),
+          MyRoutes.brokerDocumentVerificationRoute: (context) =>
+              const BrokerDocumentVerificationPage(),
+          MyRoutes.brokerProfileRoute: (context) => const BrokerProfilePage(),
+        },
+      ),
     );
   }
 }
