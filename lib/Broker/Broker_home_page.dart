@@ -68,11 +68,11 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 color: AppColors.primary,
                 borderRadius: BorderRadius.circular(10),
               ),
-              // child: const Icon(
-              //   Icons.business_rounded,
-              //   color: Colors.white,
-              //   size: 21,
-              // ),
+              child: const Icon(
+                Icons.business_rounded,
+                color: Colors.white,
+                size: 21,
+              ),
             ),
             const SizedBox(width: 10),
             const Column(
@@ -111,10 +111,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            color: AppColors.divider,
-          ),
+          child: Container(height: 1, color: AppColors.divider),
         ),
       ),
       body: SingleChildScrollView(
@@ -131,10 +128,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
 
             const SizedBox(height: 26),
 
-            _buildSectionTitle(
-              title: 'Overview',
-              actionText: 'This Month',
-            ),
+            _buildSectionTitle(title: 'Overview', actionText: 'This Month'),
 
             const SizedBox(height: 12),
 
@@ -146,10 +140,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
               title: 'Visit Requests',
               actionText: 'View All',
               onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  MyRoutes.brokerVisitsRoute,
-                );
+                Navigator.pushNamed(context, MyRoutes.brokerVisitsRoute);
               },
             ),
 
@@ -157,10 +148,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
 
             GestureDetector(
               onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  MyRoutes.brokerVisitsRoute,
-                );
+                Navigator.pushNamed(context, MyRoutes.brokerVisitsRoute);
               },
               child: _buildVisitRequestCard(),
             ),
@@ -171,10 +159,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
               title: 'Deal Requests',
               actionText: 'View All',
               onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  MyRoutes.brokerDealRequestsRoute,
-                );
+                Navigator.pushNamed(context, MyRoutes.brokerDealRequestsRoute);
               },
             ),
 
@@ -182,10 +167,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
 
             GestureDetector(
               onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  MyRoutes.brokerDealRequestsRoute,
-                );
+                Navigator.pushNamed(context, MyRoutes.brokerDealRequestsRoute);
               },
               child: _buildDealRequestCard(),
             ),
@@ -196,10 +178,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
               title: 'Upcoming Visits',
               actionText: 'View All',
               onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  MyRoutes.brokerVisitsRoute,
-                );
+                Navigator.pushNamed(context, MyRoutes.brokerVisitsRoute);
               },
             ),
 
@@ -210,10 +189,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: GestureDetector(
                   onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      MyRoutes.visitDetailsRoute,
-                    );
+                    Navigator.pushNamed(context, MyRoutes.visitDetailsRoute);
                   },
                   child: _buildUpcomingVisit(visit),
                 ),
@@ -226,10 +202,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
               title: 'Recent Properties',
               actionText: 'View All',
               onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  MyRoutes.brokerPropertiesRoute,
-                );
+                Navigator.pushNamed(context, MyRoutes.brokerPropertiesRoute);
               },
             ),
 
@@ -240,10 +213,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: GestureDetector(
                   onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      MyRoutes.propertyDetailsRoute,
-                    );
+                    Navigator.pushNamed(context, MyRoutes.propertyDetailsRoute);
                   },
                   child: _buildPropertyCard(property),
                 ),
@@ -259,9 +229,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
         ),
       ),
 
-      bottomNavigationBar: const BrokerBottomNavbar(
-        selectedIndex: 0,
-      ),
+      bottomNavigationBar: const BrokerBottomNavbar(selectedIndex: 0),
     );
   }
 
@@ -292,10 +260,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
               const SizedBox(height: 5),
               const Text(
                 'Manage your properties and clients easily.',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
             ],
           ),
@@ -351,20 +316,12 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      MyRoutes.addPropertyRoute,
-                    );
+                    Navigator.pushNamed(context, MyRoutes.addPropertyRoute);
                   },
-                  icon: const Icon(
-                    Icons.add_rounded,
-                    size: 18,
-                  ),
+                  icon: const Icon(Icons.add_rounded, size: 18),
                   label: const Text(
                     'Add Property',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
@@ -448,10 +405,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 value: '24',
                 icon: Icons.home_work_outlined,
                 onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    MyRoutes.brokerPropertiesRoute,
-                  );
+                  Navigator.pushNamed(context, MyRoutes.brokerPropertiesRoute);
                 },
               ),
             ),
@@ -462,10 +416,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 value: '18',
                 icon: Icons.verified_outlined,
                 onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    MyRoutes.brokerPropertiesRoute,
-                  );
+                  Navigator.pushNamed(context, MyRoutes.brokerPropertiesRoute);
                 },
               ),
             ),
@@ -482,10 +433,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 value: '06',
                 icon: Icons.pending_actions_rounded,
                 onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    MyRoutes.brokerVisitsRoute,
-                  );
+                  Navigator.pushNamed(context, MyRoutes.brokerVisitsRoute);
                 },
               ),
             ),
@@ -496,10 +444,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 value: '15',
                 icon: Icons.people_outline_rounded,
                 onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    MyRoutes.brokerBuyersRoute,
-                  );
+                  Navigator.pushNamed(context, MyRoutes.brokerBuyersRoute);
                 },
               ),
             ),
@@ -556,9 +501,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(
-            color: AppColors.border,
-          ),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -570,11 +513,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 color: AppColors.primary.withValues(alpha: 0.09),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                icon,
-                color: AppColors.primary,
-                size: 21,
-              ),
+              child: Icon(icon, color: AppColors.primary, size: 21),
             ),
             const SizedBox(height: 13),
             Text(
@@ -606,9 +545,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: AppColors.border,
-        ),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
@@ -650,10 +587,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 6,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: AppColors.warning.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(8),
@@ -678,9 +612,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: AppColors.border,
-        ),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
@@ -722,10 +654,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 6,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: AppColors.accent.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(8),
@@ -750,9 +679,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: AppColors.border,
-        ),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
@@ -830,9 +757,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: AppColors.border,
-        ),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
@@ -843,6 +768,18 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
               width: 76,
               height: 76,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 76,
+                  height: 76,
+                  color: AppColors.background,
+                  child: const Icon(
+                    Icons.image_not_supported_outlined,
+                    size: 30,
+                    color: AppColors.textSecondary,
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(width: 13),
@@ -953,10 +890,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 icon: Icons.add_home_work_outlined,
                 title: 'Add Property',
                 onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    MyRoutes.addPropertyRoute,
-                  );
+                  Navigator.pushNamed(context, MyRoutes.addPropertyRoute);
                 },
               ),
             ),
@@ -966,10 +900,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 icon: Icons.calendar_month_outlined,
                 title: 'Manage Visits',
                 onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    MyRoutes.brokerVisitsRoute,
-                  );
+                  Navigator.pushNamed(context, MyRoutes.brokerVisitsRoute);
                 },
               ),
             ),
@@ -985,10 +916,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
                 icon: Icons.people_outline_rounded,
                 title: 'Buyer Management',
                 onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    MyRoutes.brokerBuyersRoute,
-                  );
+                  Navigator.pushNamed(context, MyRoutes.brokerBuyersRoute);
                 },
               ),
             ),
@@ -1025,9 +953,7 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
               ),
             ),
             const SizedBox(width: 10),
-            const Expanded(
-              child: SizedBox(),
-            ),
+            const Expanded(child: SizedBox()),
           ],
         ),
       ],
@@ -1042,24 +968,15 @@ class _BrokerHomePageState extends State<BrokerHomePage> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 13,
-          vertical: 14,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 14),
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(13),
-          border: Border.all(
-            color: AppColors.border,
-          ),
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: AppColors.primary,
-              size: 21,
-            ),
+            Icon(icon, color: AppColors.primary, size: 21),
             const SizedBox(width: 9),
             Expanded(
               child: Text(

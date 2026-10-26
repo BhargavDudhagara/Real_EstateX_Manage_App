@@ -1,6 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:app/theme/app_colors.dart';
 import 'package:app/utils/routes.dart';
+import 'package:app/services/property_service.dart';
+import 'package:app/models/property_model.dart';
 
 class PropertyDetailsPage extends StatefulWidget {
   const PropertyDetailsPage({super.key});
@@ -11,6 +17,16 @@ class PropertyDetailsPage extends StatefulWidget {
 
 class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
   Map<String, dynamic> property = {};
+  final PropertyService _propertyService = PropertyService();
+
+  String get _propertyId {
+    return (property['id'] ??
+            property['propertyId'] ??
+            property['documentId'] ??
+            '')
+        .toString()
+        .trim();
+  }
 
   @override
   void didChangeDependencies() {
@@ -18,8 +34,16 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
 
     final arguments = ModalRoute.of(context)?.settings.arguments;
 
-    if (arguments is Map<String, dynamic>) {
-      property = arguments;
+    if (arguments is PropertyModel) {
+      property = {...arguments.toMap(), 'id': arguments.id};
+    } else if (arguments is Map) {
+      property = Map<String, dynamic>.from(arguments);
+
+      // Support a Firestore DocumentSnapshot passed as an argument.
+      final snapshot = property['documentSnapshot'];
+      if (_propertyId.isEmpty && snapshot is DocumentSnapshot) {
+        property['id'] = snapshot.id;
+      }
     }
   }
 
@@ -33,8 +57,9 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
       );
     }
 
-    final status = property["status"] ?? "Active";
-    final verification = property["verification"] ?? "Verified";
+    final approval = _approvalState();
+    final status = approval;
+    final verification = approval == "Approved" ? "Verified" : approval;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -124,6 +149,8 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                const SizedBox(height: 16),
+                _highlightsRow(),
                 const SizedBox(height: 20),
                 _verificationCard(verification),
                 const SizedBox(height: 22),
@@ -132,7 +159,10 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                   icon: Icons.home_work_outlined,
                   child: Column(
                     children: [
-                      _detailRow("Property ID", property["id"] ?? "-"),
+                      _detailRow(
+                        "Property ID",
+                        _propertyId.isEmpty ? "-" : _propertyId,
+                      ),
                       _detailRow(
                         "Property Type",
                         property["propertyType"] ?? "-",
@@ -245,33 +275,44 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                 _sectionCard(
                   title: "Amenities",
                   icon: Icons.star_border_rounded,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: (property["amenities"] as List<dynamic>? ?? [])
-                        .map(
-                          (item) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.background,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Text(
-                              item.toString(),
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                  child: (property["amenities"] as List<dynamic>? ?? []).isEmpty
+                      ? const Text(
+                          "No amenities added.",
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
                           ),
                         )
-                        .toList(),
-                  ),
+                      : Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children:
+                              (property["amenities"] as List<dynamic>? ?? [])
+                                  .map(
+                                    (item) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.background,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: AppColors.border,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        item.toString(),
+                                        style: const TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                        ),
                 ),
                 const SizedBox(height: 16),
                 _sectionCard(
@@ -288,23 +329,42 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                 ),
                 const SizedBox(height: 16),
                 _sectionCard(
+                  title: "Listing Information",
+                  icon: Icons.info_outline_rounded,
+                  child: Column(
+                    children: [
+                      _detailRow("Approval Status", approval),
+                      _detailRow(
+                        "Listed On",
+                        _formatDate(property["createdAt"]),
+                      ),
+                      _detailRow(
+                        "Last Updated",
+                        _formatDate(property["updatedAt"]),
+                      ),
+                      _detailRow("Furnishing", property["furnishing"] ?? "-"),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _sectionCard(
                   title: "Listing Performance",
                   icon: Icons.insights_outlined,
                   child: Row(
                     children: [
                       _performanceItem(
                         Icons.visibility_outlined,
-                        property["views"] ?? "0",
+                        "${property["views"] ?? "0"}",
                         "Views",
                       ),
                       _performanceItem(
                         Icons.chat_bubble_outline_rounded,
-                        property["inquiries"] ?? "0",
+                        "${property["inquiries"] ?? "0"}",
                         "Inquiries",
                       ),
                       _performanceItem(
                         Icons.calendar_today_outlined,
-                        property["visits"] ?? "0",
+                        "${property["visits"] ?? "0"}",
                         "Visits",
                       ),
                     ],
@@ -328,23 +388,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _changeStatus,
-                        icon: const Icon(Icons.sync_alt_rounded, size: 18),
-                        label: const Text("Change Status"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size.fromHeight(50),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(13),
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ],
@@ -355,25 +398,194 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     );
   }
 
+  String _lower(dynamic value) => (value ?? "").toString().trim().toLowerCase();
+
+  bool _isTrue(dynamic value) => value == true || _lower(value) == "true";
+
+  String _approvalState() {
+    final status = _lower(property["status"]);
+    final verification = _lower(property["verification"]);
+    final verificationStatus = _lower(property["verificationStatus"]);
+
+    if (status == "rejected" ||
+        verification == "rejected" ||
+        verificationStatus == "rejected") {
+      return "Rejected";
+    }
+
+    if (_isTrue(property["isApproved"]) ||
+        _isTrue(property["isVerified"]) ||
+        _isTrue(property["verified"]) ||
+        const ["approved", "active", "verified"].contains(status) ||
+        const ["approved", "verified"].contains(verification) ||
+        const ["approved", "verified"].contains(verificationStatus)) {
+      return "Approved";
+    }
+
+    return "Pending";
+  }
+
+  String _formatDate(dynamic value) {
+    DateTime? date;
+
+    try {
+      if (value is DateTime) {
+        date = value;
+      } else if (value is Timestamp) {
+        date = value.toDate();
+      } else if (value is String) {
+        date = DateTime.tryParse(value);
+      } else if (value is int) {
+        date = DateTime.fromMillisecondsSinceEpoch(value);
+      }
+    } catch (_) {
+      date = null;
+    }
+
+    if (date == null) return "-";
+
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    final local = date.toLocal();
+    return "${local.day} ${months[local.month - 1]} ${local.year}";
+  }
+
+  Widget _highlightsRow() {
+    return Row(
+      children: [
+        _highlightChip(
+          Icons.bed_outlined,
+          "${property["bedrooms"] ?? "-"} Beds",
+        ),
+        const SizedBox(width: 8),
+        _highlightChip(
+          Icons.bathtub_outlined,
+          "${property["bathrooms"] ?? "-"} Baths",
+        ),
+        const SizedBox(width: 8),
+        _highlightChip(
+          Icons.square_foot_outlined,
+          "${property["area"] ?? "-"}",
+        ),
+      ],
+    );
+  }
+
+  Widget _highlightChip(IconData icon, String text) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: AppColors.primary, size: 16),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _propertyImage() {
+    final imageUrl = (property["image"] ?? "").toString();
+
+    if (imageUrl.isEmpty) {
+      return _imagePlaceholder();
+    }
+
+    if (imageUrl.startsWith('http')) {
+      return SizedBox(
+        height: 250,
+        width: double.infinity,
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _imagePlaceholder(),
+        ),
+      );
+    }
+
+    if (imageUrl.startsWith('data:image')) {
+      try {
+        return SizedBox(
+          height: 250,
+          width: double.infinity,
+          child: Image.memory(
+            base64Decode(imageUrl.split(',').last),
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+            errorBuilder: (_, __, ___) => _imagePlaceholder(),
+          ),
+        );
+      } catch (_) {
+        return _imagePlaceholder();
+      }
+    }
+
+    final localFile = File(imageUrl);
+    if (localFile.existsSync()) {
+      return SizedBox(
+        height: 250,
+        width: double.infinity,
+        child: Image.file(
+          localFile,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _imagePlaceholder(),
+        ),
+      );
+    }
+
     return SizedBox(
       height: 250,
       width: double.infinity,
       child: Image.asset(
-        property["image"] ?? "assets/House.png",
+        imageUrl,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            color: AppColors.background,
-            child: const Center(
-              child: Icon(
-                Icons.image_not_supported_outlined,
-                size: 50,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          );
-        },
+        errorBuilder: (_, __, ___) => _imagePlaceholder(),
+      ),
+    );
+  }
+
+  Widget _imagePlaceholder() {
+    return Container(
+      height: 250,
+      width: double.infinity,
+      color: AppColors.background,
+      child: const Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          size: 50,
+          color: AppColors.textSecondary,
+        ),
       ),
     );
   }
@@ -381,10 +593,12 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
   Widget _statusBadge(String status) {
     Color color = AppColors.textSecondary;
 
-    if (status == "Active") {
+    if (status == "Approved" || status == "Active") {
       color = AppColors.success;
     } else if (status == "Pending") {
       color = AppColors.warning;
+    } else if (status == "Rejected") {
+      color = AppColors.error;
     }
 
     return Container(
@@ -406,34 +620,45 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
 
   Widget _verificationCard(String verification) {
     final verified = verification == "Verified";
+    final rejected = verification == "Rejected";
+    final Color color = verified
+        ? AppColors.success
+        : rejected
+        ? AppColors.error
+        : AppColors.warning;
+    final IconData icon = verified
+        ? Icons.verified_rounded
+        : rejected
+        ? Icons.cancel_outlined
+        : Icons.pending_outlined;
+    final String title = verified
+        ? "Property Verified"
+        : rejected
+        ? "Verification Rejected"
+        : "Verification In Progress";
+    final String message = verified
+        ? "Documents have been verified."
+        : rejected
+        ? "Admin rejected this listing. Edit the property and submit again."
+        : "Documents are currently being reviewed.";
 
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: verified
-            ? AppColors.success.withValues(alpha: 0.07)
-            : AppColors.warning.withValues(alpha: 0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: verified
-              ? AppColors.success.withValues(alpha: 0.20)
-              : AppColors.warning.withValues(alpha: 0.20),
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.20)),
       ),
       child: Row(
         children: [
-          Icon(
-            verified ? Icons.verified_rounded : Icons.pending_outlined,
-            color: verified ? AppColors.success : AppColors.warning,
-            size: 25,
-          ),
+          Icon(icon, color: color, size: 25),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  verified ? "Property Verified" : "Verification In Progress",
+                  title,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 14,
@@ -442,9 +667,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  verified
-                      ? "Documents have been verified."
-                      : "Documents are currently being reviewed.",
+                  message,
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 11,
@@ -616,80 +839,10 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
   }
 
   void _editProperty() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Edit property option selected"),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _changeStatus() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 30),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                height: 4,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "Change Property Status",
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 18),
-              _statusOption("Active", AppColors.success),
-              _statusOption("Inactive", AppColors.textSecondary),
-              _statusOption("Pending", AppColors.warning),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _statusOption(String status, Color color) {
-    return ListTile(
-      onTap: () {
-        setState(() {
-          property["status"] = status;
-        });
-        Navigator.pop(context);
-      },
-      leading: CircleAvatar(
-        radius: 18,
-        backgroundColor: color.withValues(alpha: 0.10),
-        child: Icon(Icons.circle, color: color, size: 10),
-      ),
-      title: Text(
-        status,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      trailing: const Icon(
-        Icons.arrow_forward_ios_rounded,
-        size: 15,
-        color: AppColors.textSecondary,
-      ),
+    Navigator.pushNamed(
+      context,
+      MyRoutes.addPropertyRoute,
+      arguments: property,
     );
   }
 
@@ -700,7 +853,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
-      builder: (context) {
+      builder: (sheetContext) {
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -712,7 +865,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                 ),
                 title: const Text("Edit Property"),
                 onTap: () {
-                  Navigator.pop(context);
+                  Navigator.pop(sheetContext);
                   _editProperty();
                 },
               ),
@@ -722,9 +875,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                   color: AppColors.primary,
                 ),
                 title: const Text("Share Property"),
-                onTap: () {
-                  Navigator.pop(context);
-                },
+                onTap: () => Navigator.pop(sheetContext),
               ),
               ListTile(
                 leading: const Icon(
@@ -736,7 +887,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
                   style: TextStyle(color: AppColors.error),
                 ),
                 onTap: () {
-                  Navigator.pop(context);
+                  Navigator.pop(sheetContext);
                   _deleteProperty();
                 },
               ),
@@ -747,35 +898,70 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage> {
     );
   }
 
-  void _deleteProperty() {
-    showDialog(
+  Future<void> _deleteProperty() async {
+    final propertyId = _propertyId;
+
+    if (propertyId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Property ID not found. Open the property from your Broker Properties list.",
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Delete Property?"),
-          content: const Text("Are you sure you want to delete this property?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Delete Property?"),
+        content: const Text("Are you sure you want to delete this property?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushReplacementNamed(
-                  context,
-                  MyRoutes.brokerPropertiesRoute,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text("Delete"),
-            ),
-          ],
-        );
-      },
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
     );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await _propertyService.deleteProperty(propertyId);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Property deleted successfully"),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      Navigator.of(
+        context,
+      ).pushReplacementNamed(MyRoutes.brokerPropertiesRoute);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error deleting property: $e"),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    }
   }
 }

@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:app/theme/app_colors.dart';
 import 'package:app/utils/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:app/widgets/bottom_navbar.dart';
 import 'package:app/pages/property_detail.dart';
+import 'package:app/services/property_service.dart';
+import 'package:app/models/property_model.dart';
 
 class BuyerHomePage extends StatefulWidget {
   const BuyerHomePage({super.key});
@@ -25,6 +29,7 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
 
   final PageController _pageController = PageController();
   Timer? _bannerTimer;
+  final PropertyService _propertyService = PropertyService();
 
   final List<String> categories = [
     "All",
@@ -42,99 +47,7 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
     'assets/Farm1.png',
   ];
 
-  final List<Map<String, String>> properties = [
-    {
-      "image": "assets/House.png",
-      "name": "Modern Family House",
-      "location": "Rajkot, Gujarat",
-      "price": "₹85 Lakh",
-      "type": "House",
-    },
-    {
-      "image": "assets/House1.png",
-      "name": "Luxury Family Home",
-      "location": "Ahmedabad, Gujarat",
-      "price": "₹92 Lakh",
-      "type": "House",
-    },
-    {
-      "image": "assets/House2.png",
-      "name": "Elegant City House",
-      "location": "Gandhinagar, Gujarat",
-      "price": "₹78 Lakh",
-      "type": "House",
-    },
-    {
-      "image": "assets/Apartment.png",
-      "name": "Premium City Apartment",
-      "location": "Ahmedabad, Gujarat",
-      "price": "₹72 Lakh",
-      "type": "Apartment",
-    },
-    {
-      "image": "assets/Apartment1.png",
-      "name": "Modern Luxury Apartment",
-      "location": "Rajkot, Gujarat",
-      "price": "₹68 Lakh",
-      "type": "Apartment",
-    },
-    {
-      "image": "assets/Vila.png",
-      "name": "Premium Garden Villa",
-      "location": "Gandhinagar, Gujarat",
-      "price": "₹1.25 Cr",
-      "type": "Villa",
-    },
-    {
-      "image": "assets/Vila1.png",
-      "name": "Luxury Private Villa",
-      "location": "Vadodara, Gujarat",
-      "price": "₹1.45 Cr",
-      "type": "Villa",
-    },
-    {
-      "image": "assets/Plot.png",
-      "name": "Residential Plot",
-      "location": "Rajkot, Gujarat",
-      "price": "₹38 Lakh",
-      "type": "Plot",
-    },
-    {
-      "image": "assets/Plot1.png",
-      "name": "Prime Location Plot",
-      "location": "Ahmedabad, Gujarat",
-      "price": "₹52 Lakh",
-      "type": "Plot",
-    },
-    {
-      "image": "assets/Plot2.png",
-      "name": "Developing Area Plot",
-      "location": "Gandhinagar, Gujarat",
-      "price": "₹45 Lakh",
-      "type": "Plot",
-    },
-    {
-      "image": "assets/Farm.png",
-      "name": "Green Farm Land",
-      "location": "Gondal, Gujarat",
-      "price": "₹45 Lakh",
-      "type": "Farm",
-    },
-    {
-      "image": "assets/Farm1.png",
-      "name": "Peaceful Agricultural Farm",
-      "location": "Rajkot, Gujarat",
-      "price": "₹58 Lakh",
-      "type": "Farm",
-    },
-    {
-      "image": "assets/Farm2.png",
-      "name": "Large Green Farm",
-      "location": "Junagadh, Gujarat",
-      "price": "₹75 Lakh",
-      "type": "Farm",
-    },
-  ];
+  List<PropertyModel> properties = [];
 
   final List<Map<String, String>> brokers = [
     {
@@ -221,7 +134,7 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
     },
   ];
 
-  List<Map<String, String>> get filteredProperties {
+  List<PropertyModel> get filteredProperties {
     if (selectedCategory == 0) {
       return properties;
     }
@@ -229,13 +142,15 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
     final selectedType = categories[selectedCategory];
 
     return properties
-        .where((property) => property["type"] == selectedType)
+        .where((property) => property.propertyType == selectedType)
         .toList();
   }
 
   @override
   void initState() {
     super.initState();
+
+    _loadProperties();
 
     _bannerTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (_pageController.hasClients) {
@@ -254,6 +169,14 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
     });
   }
 
+  void _loadProperties() {
+    _propertyService.getApprovedProperties().listen((data) {
+      setState(() {
+        properties = data;
+      });
+    });
+  }
+
   @override
   void dispose() {
     _bannerTimer?.cancel();
@@ -261,19 +184,19 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
     super.dispose();
   }
 
-  void _openPropertyDetails(Map<String, String> property) {
+  void _openPropertyDetails(PropertyModel property) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PropertyDetailsPage(property: property),
+        builder: (context) => PropertyDetailsPage(property: property.toMap()),
       ),
     );
   }
 
   // ==================== COMPARE HELPERS ====================
 
-  // Converts "₹85 Lakh" / "₹1.25 Cr" into a value in Lakh.
-  double _priceInLakh(Map<String, String> property) {
+  // Helper for Map<String, String> (for comparison feature)
+  double _priceInLakhFromMap(Map<String, String> property) {
     final String raw = (property["price"] ?? "").replaceAll("₹", "").trim();
     final List<String> parts = raw.split(" ");
     final double value = double.tryParse(parts.first) ?? 0;
@@ -328,8 +251,18 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
     });
   }
 
-  void _toggleCompareSelection(Map<String, String> property) {
-    final bool alreadySelected = selectedForCompare.contains(property);
+  void _toggleCompareSelection(PropertyModel property) {
+    final propertyMap = {
+      "image": property.image,
+      "name": property.title,
+      "location": property.location,
+      "price": property.price,
+      "type": property.propertyType,
+    };
+
+    final bool alreadySelected = selectedForCompare.any(
+      (p) => p["name"] == property.title,
+    );
 
     if (!alreadySelected && selectedForCompare.length >= maxCompare) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -344,9 +277,9 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
 
     setState(() {
       if (alreadySelected) {
-        selectedForCompare.remove(property);
+        selectedForCompare.removeWhere((p) => p["name"] == property.title);
       } else {
-        selectedForCompare.add(property);
+        selectedForCompare.add(propertyMap);
       }
     });
   }
@@ -367,7 +300,9 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
       selectedForCompare,
     );
 
-    final List<double> prices = items.map(_priceInLakh).toList();
+    final List<double> prices = items
+        .map((item) => _priceInLakhFromMap(item))
+        .toList();
     final double lowest = prices.reduce((a, b) => a < b ? a : b);
 
     showModalBottomSheet(
@@ -439,11 +374,9 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
                                   borderRadius: const BorderRadius.vertical(
                                     top: Radius.circular(13),
                                   ),
-                                  child: Image.asset(
+                                  child: _buildPropertyImage(
                                     property["image"]!,
-                                    width: double.infinity,
-                                    height: 90,
-                                    fit: BoxFit.cover,
+                                    90,
                                   ),
                                 ),
                                 Padding(
@@ -846,7 +779,9 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
                   itemCount: filteredProperties.length,
                   itemBuilder: (context, index) {
                     final property = filteredProperties[index];
-                    final bool isPicked = selectedForCompare.contains(property);
+                    final bool isPicked = selectedForCompare.any(
+                      (p) => p["name"] == property.title,
+                    );
 
                     return GestureDetector(
                       onTap: () {
@@ -885,11 +820,9 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
                                   borderRadius: const BorderRadius.vertical(
                                     top: Radius.circular(14),
                                   ),
-                                  child: Image.asset(
-                                    property["image"]!,
-                                    width: double.infinity,
-                                    height: 135,
-                                    fit: BoxFit.cover,
+                                  child: _buildPropertyImage(
+                                    property.image,
+                                    135,
                                   ),
                                 ),
                                 if (compareMode)
@@ -928,7 +861,7 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    property["name"]!,
+                                    property.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
@@ -948,7 +881,7 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
                                       const SizedBox(width: 3),
                                       Expanded(
                                         child: Text(
-                                          property["location"]!,
+                                          property.location,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
@@ -965,7 +898,7 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        property["price"]!,
+                                        property.price,
                                         style: const TextStyle(
                                           color: AppColors.primary,
                                           fontSize: 15,
@@ -984,7 +917,7 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
                                           ),
                                         ),
                                         child: Text(
-                                          property["type"]!,
+                                          property.propertyType,
                                           style: const TextStyle(
                                             color: AppColors.textSecondary,
                                             fontSize: 10,
@@ -1631,6 +1564,113 @@ class _BuyerHomePageState extends State<BuyerHomePage> {
         mainAxisSize: MainAxisSize.min,
         children: [if (compareMode) _compareBar(), const BottomNavbar()],
       ),
+    );
+  }
+
+  Widget _buildPropertyImage(String imageUrl, double height) {
+    if (imageUrl.isEmpty) {
+      return Container(
+        height: height,
+        color: AppColors.background,
+        child: const Center(
+          child: Icon(
+            Icons.image_not_supported_outlined,
+            size: 30,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      );
+    }
+
+    if (imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            height: height,
+            color: AppColors.background,
+            child: const Center(
+              child: Icon(
+                Icons.image_not_supported_outlined,
+                size: 30,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    // Image saved inside Firestore as base64 (no Firebase Storage needed)
+    if (imageUrl.startsWith('data:image')) {
+      return Image.memory(
+        base64Decode(imageUrl.split(',').last),
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            height: height,
+            color: AppColors.background,
+            child: const Center(
+              child: Icon(
+                Icons.image_not_supported_outlined,
+                size: 30,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    // Local file picked from the device gallery
+    final localFile = File(imageUrl);
+    if (localFile.existsSync()) {
+      return Image.file(
+        localFile,
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            height: height,
+            color: AppColors.background,
+            child: const Center(
+              child: Icon(
+                Icons.image_not_supported_outlined,
+                size: 30,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    // Try to load as asset
+    return Image.asset(
+      imageUrl,
+      width: double.infinity,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          height: height,
+          color: AppColors.background,
+          child: const Center(
+            child: Icon(
+              Icons.image_not_supported_outlined,
+              size: 30,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        );
+      },
     );
   }
 }

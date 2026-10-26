@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:app/theme/app_colors.dart';
 import 'package:app/utils/routes.dart';
+import 'package:app/services/property_service.dart';
+import 'package:app/services/storage_service.dart';
+import 'package:app/models/property_model.dart';
+import 'dart:convert';
+import 'dart:io';
 
 class AddPropertyPage extends StatefulWidget {
   const AddPropertyPage({super.key});
@@ -11,6 +16,8 @@ class AddPropertyPage extends StatefulWidget {
 
 class _AddPropertyPageState extends State<AddPropertyPage> {
   final _formKey = GlobalKey<FormState>();
+  final PropertyService _propertyService = PropertyService();
+  final StorageService _storageService = StorageService();
 
   final titleController = TextEditingController();
   final priceController = TextEditingController();
@@ -27,8 +34,11 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
   String propertyType = "House";
   String listingType = "For Sale";
   String furnishing = "Unfurnished";
+  String? selectedImagePath;
+  String existingImageUrl = "";
+  bool isUploading = false;
 
-  final List<String> selectedAmenities = [];
+  List<String> selectedAmenities = [];
 
   final List<String> amenities = [
     "Parking",
@@ -42,6 +52,63 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     "Electricity",
     "Club House",
   ];
+
+  bool isEditing = false;
+  String? editingPropertyId;
+  bool _hasCheckedArguments = false;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasCheckedArguments) {
+      _checkIfEditing();
+      _hasCheckedArguments = true;
+    }
+  }
+
+  void _checkIfEditing() {
+    final arguments = ModalRoute.of(context)?.settings.arguments;
+    if (arguments is Map<String, dynamic>) {
+      setState(() {
+        isEditing = true;
+        editingPropertyId = arguments['id'];
+        _populateFields(arguments);
+      });
+    }
+  }
+
+  void _populateFields(Map<String, dynamic> data) {
+    titleController.text = data['title'] ?? '';
+    priceController.text = data['price'] ?? '';
+    addressController.text = data['address'] ?? '';
+    cityController.text = data['location'] ?? '';
+    areaController.text = data['area'] ?? '';
+    descriptionController.text = data['description'] ?? '';
+    bedroomsController.text = data['bedrooms'] ?? '';
+    bathroomsController.text = data['bathrooms'] ?? '';
+    floorsController.text = data['floors'] ?? '';
+    parkingController.text = data['parking'] ?? '';
+    yearController.text = data['year'] ?? '';
+    propertyType = data['propertyType'] ?? 'House';
+    listingType = data['listingType'] ?? 'For Sale';
+    furnishing = data['furnishing'] ?? 'Unfurnished';
+    existingImageUrl = data['image'] ?? '';
+    selectedAmenities = List<String>.from(data['amenities'] ?? []);
+  }
+
+  Future<void> _pickImage() async {
+    final imagePath = await _storageService.pickImageFromGallery();
+    if (imagePath != null) {
+      setState(() {
+        selectedImagePath = imagePath;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -59,19 +126,118 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
     super.dispose();
   }
 
-  void saveProperty() {
+  void saveProperty() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Property added successfully"),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (selectedImagePath == null && existingImageUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please select a property image"),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
-    Navigator.pushReplacementNamed(context, MyRoutes.brokerPropertiesRoute);
+    setState(() {
+      isUploading = true;
+    });
+
+    try {
+      String imageUrl = "";
+
+      // Upload new image if a local file is selected
+      if (selectedImagePath != null) {
+        final tempPropertyId =
+            editingPropertyId ??
+            DateTime.now().millisecondsSinceEpoch.toString();
+        final uploadedUrl = await _storageService.uploadPropertyImage(
+          selectedImagePath!,
+          tempPropertyId,
+        );
+        if (uploadedUrl == null || uploadedUrl.isEmpty) {
+          throw Exception(
+            "Image upload failed. Check internet and Firebase Storage setup.",
+          );
+        }
+        imageUrl = uploadedUrl;
+      } else if (isEditing) {
+        // Keep existing image if editing and no new image selected
+        imageUrl = existingImageUrl;
+      }
+
+      final property = PropertyModel(
+        id: editingPropertyId ?? '',
+        brokerId: '',
+        title: titleController.text.trim(),
+        propertyType: propertyType,
+        listingType: listingType,
+        price: priceController.text.trim(),
+        location: cityController.text.trim(),
+        address: addressController.text.trim(),
+        area: areaController.text.trim(),
+        bedrooms: bedroomsController.text.trim(),
+        bathrooms: bathroomsController.text.trim(),
+        floors: floorsController.text.trim(),
+        parking: parkingController.text.trim(),
+        furnishing: furnishing,
+        year: yearController.text.trim(),
+        description: descriptionController.text.trim(),
+        amenities: selectedAmenities,
+        image: imageUrl,
+        status: 'Pending',
+        isApproved: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      if (isEditing && editingPropertyId != null) {
+        await _propertyService.updateProperty(property);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Property updated successfully. Sent for re-approval.",
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else {
+        await _propertyService.addProperty(property);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Property added successfully. Pending admin approval.",
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, MyRoutes.brokerPropertiesRoute);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error saving property: ${e.toString()}"),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isUploading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -81,9 +247,9 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text(
-          "Add Property",
-          style: TextStyle(
+        title: Text(
+          isEditing ? "Edit Property" : "Add Property",
+          style: const TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
           ),
@@ -314,7 +480,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
             SizedBox(
               height: 52,
               child: ElevatedButton(
-                onPressed: saveProperty,
+                onPressed: isUploading ? null : saveProperty,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -323,10 +489,24 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  "Publish Property",
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                ),
+                child: isUploading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : Text(
+                        isEditing ? "Update Property" : "Publish Property",
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -431,46 +611,147 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
   }
 
   Widget _imageUploadBox() {
-    return Container(
-      height: 150,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              height: 48,
-              width: 48,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.add_photo_alternate_outlined,
-                color: AppColors.primary,
-                size: 25,
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              "Add Property Photos",
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              "Upload clear images of the property",
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
-            ),
-          ],
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selectedImagePath != null || existingImageUrl.isNotEmpty
+                ? AppColors.primary
+                : AppColors.border,
+            width: selectedImagePath != null || existingImageUrl.isNotEmpty
+                ? 2
+                : 1,
+          ),
         ),
+        child: selectedImagePath != null || existingImageUrl.isNotEmpty
+            ? Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: selectedImagePath != null
+                        ? Image.file(
+                            File(selectedImagePath!),
+                            width: double.infinity,
+                            height: 200,
+                            fit: BoxFit.cover,
+                          )
+                        : existingImageUrl.startsWith('data:image')
+                        ? Image.memory(
+                            base64Decode(existingImageUrl.split(',').last),
+                            width: double.infinity,
+                            height: 200,
+                            fit: BoxFit.cover,
+                            gaplessPlayback: true,
+                          )
+                        : existingImageUrl.isNotEmpty &&
+                              existingImageUrl.startsWith('http')
+                        ? Image.network(
+                            existingImageUrl,
+                            width: double.infinity,
+                            height: 200,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Center(
+                                child: Icon(
+                                  Icons.broken_image_outlined,
+                                  size: 50,
+                                  color: AppColors.textSecondary,
+                                ),
+                              );
+                            },
+                          )
+                        : const Center(
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              size: 50,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            selectedImagePath = null;
+                            existingImageUrl = '';
+                          });
+                        },
+                        icon: const Icon(Icons.close, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        "Tap to change",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      height: 48,
+                      width: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.add_photo_alternate_outlined,
+                        color: AppColors.primary,
+                        size: 25,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Add Property Photo",
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      "Tap to select from gallery",
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }

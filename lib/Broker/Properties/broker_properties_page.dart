@@ -1,7 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:app/theme/app_colors.dart';
 import 'package:app/utils/routes.dart';
 import 'package:app/widgets/broker_bottom_navbar.dart';
+import 'package:app/services/property_service.dart';
+import 'package:app/models/property_model.dart';
 
 class BrokerPropertiesPage extends StatefulWidget {
   const BrokerPropertiesPage({super.key});
@@ -14,126 +18,15 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
   String selectedFilter = "All";
 
   final TextEditingController searchController = TextEditingController();
+  final PropertyService _propertyService = PropertyService();
 
-  final List<Map<String, dynamic>> properties = [
-    {
-      "id": "EST001",
-      "image": "assets/House.png",
-      "title": "Modern Family House",
-      "propertyType": "House",
-      "listingType": "For Sale",
-      "price": "₹85 Lakh",
-      "location": "Rajkot, Gujarat",
-      "address": "150 Feet Ring Road, Rajkot",
-      "area": "1850 sq.ft",
-      "bedrooms": "3",
-      "bathrooms": "2",
-      "floors": "2",
-      "parking": "2 Cars",
-      "furnishing": "Semi Furnished",
-      "year": "2022",
-      "status": "Active",
-      "verification": "Verified",
-      "views": "128",
-      "inquiries": "12",
-      "visits": "5",
-      "description":
-          "A modern family house located in a peaceful residential area with excellent connectivity to schools, hospitals and markets.",
-      "amenities": [
-        "Parking",
-        "Garden",
-        "Security",
-        "Water Supply",
-        "Power Backup",
-      ],
-    },
-    {
-      "id": "EST002",
-      "image": "assets/Apartment.png",
-      "title": "Premium City Apartment",
-      "propertyType": "Apartment",
-      "listingType": "For Sale",
-      "price": "₹72 Lakh",
-      "location": "Ahmedabad, Gujarat",
-      "address": "SG Highway, Ahmedabad",
-      "area": "1450 sq.ft",
-      "bedrooms": "3",
-      "bathrooms": "2",
-      "floors": "1",
-      "parking": "1 Car",
-      "furnishing": "Fully Furnished",
-      "year": "2023",
-      "status": "Pending",
-      "verification": "Under Review",
-      "views": "96",
-      "inquiries": "8",
-      "visits": "3",
-      "description":
-          "Premium apartment with modern interiors, excellent amenities and convenient access to major city locations.",
-      "amenities": ["Lift", "Gym", "Security", "Parking", "Club House"],
-    },
-    {
-      "id": "EST003",
-      "image": "assets/Vila.png",
-      "title": "Premium Garden Villa",
-      "propertyType": "Villa",
-      "listingType": "For Sale",
-      "price": "₹1.25 Cr",
-      "location": "Gandhinagar, Gujarat",
-      "address": "Kudasan, Gandhinagar",
-      "area": "2800 sq.ft",
-      "bedrooms": "4",
-      "bathrooms": "3",
-      "floors": "2",
-      "parking": "2 Cars",
-      "furnishing": "Fully Furnished",
-      "year": "2021",
-      "status": "Active",
-      "verification": "Verified",
-      "views": "214",
-      "inquiries": "18",
-      "visits": "7",
-      "description":
-          "Spacious luxury villa with a private garden, modern interiors and premium residential surroundings.",
-      "amenities": [
-        "Garden",
-        "Parking",
-        "Security",
-        "Swimming Pool",
-        "Power Backup",
-      ],
-    },
-    {
-      "id": "EST004",
-      "image": "assets/farm.png",
-      "title": "Green Valley Farm",
-      "propertyType": "Farm",
-      "listingType": "For Sale",
-      "price": "₹95 Lakh",
-      "location": "Rajkot, Gujarat",
-      "address": "Gondal Road, Rajkot",
-      "area": "2 Acre",
-      "bedrooms": "2",
-      "bathrooms": "2",
-      "floors": "1",
-      "parking": "Open Parking",
-      "furnishing": "Unfurnished",
-      "year": "2020",
-      "status": "Inactive",
-      "verification": "Verified",
-      "views": "74",
-      "inquiries": "4",
-      "visits": "1",
-      "description":
-          "Green agricultural farm property suitable for farming, weekend living and long-term investment.",
-      "amenities": [
-        "Water Supply",
-        "Electricity",
-        "Farm House",
-        "Open Parking",
-      ],
-    },
-  ];
+  List<PropertyModel> properties = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProperties();
+  }
 
   @override
   void dispose() {
@@ -141,43 +34,49 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
     super.dispose();
   }
 
-  List<Map<String, dynamic>> get filteredProperties {
+  void _loadProperties() {
+    _propertyService.getBrokerProperties().listen((data) {
+      if (!mounted) return;
+
+      setState(() {
+        properties = data;
+      });
+    });
+  }
+
+  List<PropertyModel> get filteredProperties {
     final query = searchController.text.toLowerCase().trim();
 
     return properties.where((property) {
       final matchesFilter =
           selectedFilter == "All" ||
-          property["status"].toString().toLowerCase() ==
-              selectedFilter.toLowerCase();
+          property.status.toLowerCase() == selectedFilter.toLowerCase();
 
       final matchesSearch =
-          property["title"].toString().toLowerCase().contains(query) ||
-          property["location"].toString().toLowerCase().contains(query) ||
-          property["propertyType"].toString().toLowerCase().contains(query);
+          property.title.toLowerCase().contains(query) ||
+          property.location.toLowerCase().contains(query) ||
+          property.propertyType.toLowerCase().contains(query);
 
       return matchesFilter && matchesSearch;
     }).toList();
   }
 
-  void openProperty(Map<String, dynamic> property) {
+  void openProperty(PropertyModel property) {
     Navigator.pushNamed(
       context,
       MyRoutes.propertyDetailsRoute,
-      arguments: property,
+      arguments: {...property.toMap(), 'id': property.id},
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final active = properties.where((e) => e["status"] == "Active").length;
-
-    final pending = properties.where((e) => e["status"] == "Pending").length;
-
-    final inactive = properties.where((e) => e["status"] == "Inactive").length;
+    final active = properties.where((e) => e.status == "Approved").length;
+    final pending = properties.where((e) => e.status == "Pending").length;
+    final rejected = properties.where((e) => e.status == "Rejected").length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: AppColors.background,
@@ -224,11 +123,9 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
           child: Container(height: 1, color: AppColors.divider),
         ),
       ),
-
       body: Column(
         children: [
-          _buildHeader(active: active, pending: pending, inactive: inactive),
-
+          _buildHeader(active: active, pending: pending, rejected: rejected),
           Expanded(
             child: filteredProperties.isEmpty
                 ? _buildEmptyState()
@@ -243,7 +140,6 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
           ),
         ],
       ),
-
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.pushNamed(context, MyRoutes.addPropertyRoute);
@@ -255,7 +151,6 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
-
       bottomNavigationBar: const BrokerBottomNavbar(selectedIndex: 1),
     );
   }
@@ -263,7 +158,7 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
   Widget _buildHeader({
     required int active,
     required int pending,
-    required int inactive,
+    required int rejected,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
@@ -305,9 +200,7 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
               ),
             ),
           ),
-
           const SizedBox(height: 14),
-
           Row(
             children: [
               _summaryCard(
@@ -317,19 +210,17 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
               ),
               const SizedBox(width: 8),
               _summaryCard(
-                "Active",
+                "Approved",
                 active,
                 Icons.check_circle_outline_rounded,
               ),
               const SizedBox(width: 8),
               _summaryCard("Pending", pending, Icons.access_time_rounded),
               const SizedBox(width: 8),
-              _summaryCard("Inactive", inactive, Icons.pause_circle_outline),
+              _summaryCard("Rejected", rejected, Icons.cancel_outlined),
             ],
           ),
-
           const SizedBox(height: 16),
-
           SizedBox(
             height: 40,
             child: ListView(
@@ -337,11 +228,11 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
               children: [
                 _filterChip("All"),
                 const SizedBox(width: 8),
-                _filterChip("Active"),
+                _filterChip("Approved"),
                 const SizedBox(width: 8),
                 _filterChip("Pending"),
                 const SizedBox(width: 8),
-                _filterChip("Inactive"),
+                _filterChip("Rejected"),
               ],
             ),
           ),
@@ -422,15 +313,17 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
     );
   }
 
-  Widget _buildPropertyCard(Map<String, dynamic> property) {
-    final status = property["status"].toString();
+  Widget _buildPropertyCard(PropertyModel property) {
+    final status = property.status;
 
     Color statusColor = AppColors.textSecondary;
 
-    if (status == "Active") {
+    if (status == "Approved") {
       statusColor = AppColors.success;
     } else if (status == "Pending") {
       statusColor = AppColors.warning;
+    } else if (status == "Rejected") {
+      statusColor = AppColors.error;
     }
 
     return GestureDetector(
@@ -450,37 +343,17 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(18),
                   ),
-                  child: Image.asset(
-                    property["image"],
-                    height: 190,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 190,
-                        color: AppColors.background,
-                        child: const Center(
-                          child: Icon(
-                            Icons.image_not_supported_outlined,
-                            size: 40,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  child: _buildPropertyImage(property.image, 190),
                 ),
-
                 Positioned(
                   top: 12,
                   left: 12,
                   child: _badge(
-                    property["propertyType"],
+                    property.propertyType,
                     AppColors.surface,
                     AppColors.textPrimary,
                   ),
                 ),
-
                 Positioned(
                   top: 12,
                   right: 12,
@@ -488,7 +361,6 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
                 ),
               ],
             ),
-
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -498,7 +370,7 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          property["title"],
+                          property.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -509,7 +381,7 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
                         ),
                       ),
                       Text(
-                        property["price"],
+                        property.price,
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontSize: 16,
@@ -518,9 +390,7 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 7),
-
                   Row(
                     children: [
                       const Icon(
@@ -531,7 +401,7 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          property["location"],
+                          property.location,
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
@@ -540,25 +410,21 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 14),
-
                   Container(height: 1, color: AppColors.divider),
-
                   const SizedBox(height: 13),
-
                   Row(
                     children: [
-                      _smallInfo(Icons.square_foot_outlined, property["area"]),
+                      _smallInfo(Icons.square_foot_outlined, property.area),
                       const SizedBox(width: 14),
                       _smallInfo(
                         Icons.bed_outlined,
-                        "${property["bedrooms"]} Beds",
+                        "${property.bedrooms} Beds",
                       ),
                       const SizedBox(width: 14),
                       _smallInfo(
                         Icons.bathtub_outlined,
-                        "${property["bathrooms"]} Baths",
+                        "${property.bathrooms} Baths",
                       ),
                       const Spacer(),
                       const Icon(
@@ -606,6 +472,80 @@ class _BrokerPropertiesPageState extends State<BrokerPropertiesPage> {
           style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
         ),
       ],
+    );
+  }
+
+  Widget _buildPropertyImage(String imageUrl, double height) {
+    if (imageUrl.isEmpty) {
+      return _imagePlaceholder(height);
+    }
+
+    if (imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _imagePlaceholder(height);
+        },
+      );
+    }
+
+    if (imageUrl.startsWith('data:image')) {
+      try {
+        return Image.memory(
+          base64Decode(imageUrl.split(',').last),
+          width: double.infinity,
+          height: height,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+          errorBuilder: (context, error, stackTrace) {
+            return _imagePlaceholder(height);
+          },
+        );
+      } catch (_) {
+        return _imagePlaceholder(height);
+      }
+    }
+
+    final localFile = File(imageUrl);
+
+    if (localFile.existsSync()) {
+      return Image.file(
+        localFile,
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _imagePlaceholder(height);
+        },
+      );
+    }
+
+    return Image.asset(
+      imageUrl,
+      height: height,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return _imagePlaceholder(height);
+      },
+    );
+  }
+
+  Widget _imagePlaceholder(double height) {
+    return Container(
+      height: height,
+      width: double.infinity,
+      color: AppColors.background,
+      child: const Center(
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          size: 40,
+          color: AppColors.textSecondary,
+        ),
+      ),
     );
   }
 

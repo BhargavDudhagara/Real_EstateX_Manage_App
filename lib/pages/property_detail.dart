@@ -1,15 +1,339 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:app/theme/app_colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class PropertyDetailsPage extends StatelessWidget {
-  final Map<String, String> property;
+  final Map<String, dynamic> property;
 
-  const PropertyDetailsPage({super.key, required this.property});
+  const PropertyDetailsPage({
+    super.key,
+    required this.property,
+  });
+
+  static Widget _buildPropertyImage(String imageUrl, double height) {
+    Widget placeholder() {
+      return Container(
+        height: height,
+        width: double.infinity,
+        color: AppColors.background,
+        child: const Center(
+          child: Icon(
+            Icons.image_not_supported_outlined,
+            size: 50,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      );
+    }
+
+    if (imageUrl.isEmpty) return placeholder();
+
+    if (imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder(),
+      );
+    }
+
+    if (imageUrl.startsWith('data:image')) {
+      try {
+        return Image.memory(
+          base64Decode(imageUrl.split(',').last),
+          width: double.infinity,
+          height: height,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+          errorBuilder: (_, __, ___) => placeholder(),
+        );
+      } catch (_) {
+        return placeholder();
+      }
+    }
+
+    final localFile = File(imageUrl);
+
+    if (localFile.existsSync()) {
+      return Image.file(
+        localFile,
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder(),
+      );
+    }
+
+    return Image.asset(
+      imageUrl,
+      width: double.infinity,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => placeholder(),
+    );
+  }
+
+  Widget _buildBrokerDetails() {
+    final brokerId = (property['brokerId'] ??
+            property['broker_id'] ??
+            property['ownerId'] ??
+            '')
+        .toString()
+        .trim();
+
+    if (brokerId.isEmpty) {
+      return _brokerMessage(
+        'Broker information is not available for this property.',
+        Icons.person_off_outlined,
+      );
+    }
+
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance
+          .collection('users')
+          .doc(brokerId)
+          .get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: const Center(
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasError ||
+            !snapshot.hasData ||
+            !snapshot.data!.exists) {
+          return _brokerMessage(
+            'Broker details could not be loaded.',
+            Icons.person_outline_rounded,
+          );
+        }
+
+        final broker = snapshot.data!.data()!;
+
+        final name = (broker['name'] ??
+                broker['fullName'] ??
+                broker['displayName'] ??
+                broker['username'] ??
+                'Broker')
+            .toString();
+
+        final phone = (broker['phone'] ??
+                broker['phoneNumber'] ??
+                broker['mobile'] ??
+                broker['contactNumber'] ??
+                '')
+            .toString();
+
+        final email = (broker['email'] ?? '').toString();
+
+        final company = (broker['companyName'] ??
+                broker['company'] ??
+                '')
+            .toString();
+
+        final imageUrl = (broker['photoUrl'] ??
+                broker['profileImage'] ??
+                broker['image'] ??
+                '')
+            .toString();
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor:
+                        AppColors.primary.withValues(alpha: 0.10),
+                    backgroundImage: imageUrl.startsWith('http')
+                        ? NetworkImage(imageUrl)
+                        : null,
+                    child: imageUrl.startsWith('http')
+                        ? null
+                        : const Icon(
+                            Icons.person_rounded,
+                            color: AppColors.primary,
+                            size: 30,
+                          ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.verified_user_outlined,
+                              size: 14,
+                              color: AppColors.primary,
+                            ),
+                            SizedBox(width: 5),
+                            Text(
+                              'Property Listed By Broker',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (company.isNotEmpty) ...[
+                          const SizedBox(height: 5),
+                          Text(
+                            company,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (phone.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                _brokerInfoRow(
+                  Icons.phone_outlined,
+                  'Phone',
+                  phone,
+                ),
+              ],
+              if (email.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _brokerInfoRow(
+                  Icons.email_outlined,
+                  'Email',
+                  email,
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _brokerMessage(String message, IconData icon) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.textSecondary, size: 25),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _brokerInfoRow(
+    IconData icon,
+    String title,
+    String value,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 19,
+          color: AppColors.primary,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(height: 3),
+              SelectableText(
+                value,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final title =
+        (property['title'] ?? property['name'] ?? 'Property').toString();
+
+    final type = (property['propertyType'] ??
+            property['type'] ??
+            'House')
+        .toString();
+
+    final location = (property['location'] ?? '').toString();
+
+    final price = (property['price'] ?? '').toString();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -17,14 +341,16 @@ class PropertyDetailsPage extends StatelessWidget {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         title: const Text(
-          "Property Details",
+          'Property Details',
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
         ),
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        iconTheme: const IconThemeData(
+          color: AppColors.textPrimary,
+        ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: AppColors.divider),
@@ -35,21 +361,17 @@ class PropertyDetailsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Property Image
             Padding(
               padding: const EdgeInsets.all(16),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: Image.asset(
-                  property["image"]!,
-                  width: double.infinity,
-                  height: 230,
-                  fit: BoxFit.cover,
+                child: _buildPropertyImage(
+                  (property['image'] ?? '').toString(),
+                  230,
                 ),
               ),
             ),
 
-            // Property Information
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
@@ -60,7 +382,7 @@ class PropertyDetailsPage extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          property["name"]!,
+                          title,
                           style: const TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 23,
@@ -79,7 +401,7 @@ class PropertyDetailsPage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          property["type"]!,
+                          type,
                           style: const TextStyle(
                             color: AppColors.primary,
                             fontSize: 11,
@@ -89,9 +411,7 @@ class PropertyDetailsPage extends StatelessWidget {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 10),
-
                   Row(
                     children: [
                       const Icon(
@@ -102,7 +422,7 @@ class PropertyDetailsPage extends StatelessWidget {
                       const SizedBox(width: 5),
                       Expanded(
                         child: Text(
-                          property["location"]!,
+                          location,
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 14,
@@ -111,32 +431,26 @@ class PropertyDetailsPage extends StatelessWidget {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 14),
-
                   Text(
-                    property["price"]!,
+                    price,
                     style: const TextStyle(
                       color: AppColors.primary,
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-
                   const SizedBox(height: 24),
 
-                  // Property Overview
                   const Text(
-                    "Property Overview",
+                    'Property Overview',
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 19,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -147,22 +461,18 @@ class PropertyDetailsPage extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _detailItem(
-                          Icons.home_outlined,
-                          "Type",
-                          property["type"]!,
-                        ),
+                        _detailItem(Icons.home_outlined, 'Type', type),
                         _divider(),
                         _detailItem(
                           Icons.location_city_outlined,
-                          "Location",
-                          property["location"]!.split(",").first,
+                          'Location',
+                          location.split(',').first,
                         ),
                         _divider(),
                         _detailItem(
                           Icons.verified_outlined,
-                          "Status",
-                          "Verified",
+                          'Status',
+                          (property['status'] ?? 'Pending').toString(),
                         ),
                       ],
                     ),
@@ -170,18 +480,15 @@ class PropertyDetailsPage extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // Description
                   const Text(
-                    "Description",
+                    'Description',
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 19,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -191,10 +498,10 @@ class PropertyDetailsPage extends StatelessWidget {
                       border: Border.all(color: AppColors.border),
                     ),
                     child: Text(
-                      "This ${property["type"]!.toLowerCase()} is located in ${property["location"]}. "
-                      "It is a great property option with a convenient location and "
-                      "suitable surroundings. Explore the property and book a visit "
-                      "to know more details.",
+                      'This ${type.toLowerCase()} is located in $location. '
+                      'It is a great property option with a convenient '
+                      'location and suitable surroundings. Explore the '
+                      'property and contact the broker to know more details.',
                       style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 14,
@@ -205,7 +512,20 @@ class PropertyDetailsPage extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // Verification
+                  // Broker Details
+                  const Text(
+                    'Broker Details',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildBrokerDetails(),
+
+                  const SizedBox(height: 24),
+
                   Container(
                     padding: const EdgeInsets.all(15),
                     decoration: BoxDecoration(
@@ -228,7 +548,7 @@ class PropertyDetailsPage extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Property Verified",
+                                'Property Verification',
                                 style: TextStyle(
                                   color: AppColors.success,
                                   fontSize: 14,
@@ -237,7 +557,7 @@ class PropertyDetailsPage extends StatelessWidget {
                               ),
                               SizedBox(height: 3),
                               Text(
-                                "Property information has been verified.",
+                                'Check the property status before proceeding.',
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 11,
@@ -252,7 +572,6 @@ class PropertyDetailsPage extends StatelessWidget {
 
                   const SizedBox(height: 28),
 
-                  // Buttons
                   Row(
                     children: [
                       Expanded(
@@ -260,15 +579,17 @@ class PropertyDetailsPage extends StatelessWidget {
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text("Property added to wishlist"),
+                                content: Text('Property added to wishlist'),
                               ),
                             );
                           },
                           icon: const Icon(Icons.favorite_border_rounded),
-                          label: const Text("Wishlist"),
+                          label: const Text('Wishlist'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
-                            side: const BorderSide(color: AppColors.primary),
+                            side: const BorderSide(
+                              color: AppColors.primary,
+                            ),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -282,12 +603,12 @@ class PropertyDetailsPage extends StatelessWidget {
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text("Visit booking selected"),
+                                content: Text('Visit booking selected'),
                               ),
                             );
                           },
                           icon: const Icon(Icons.calendar_month_outlined),
-                          label: const Text("Book Visit"),
+                          label: const Text('Book Visit'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
@@ -304,7 +625,6 @@ class PropertyDetailsPage extends StatelessWidget {
 
                   const SizedBox(height: 14),
 
-                  // Property Inquiry Button
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
@@ -312,13 +632,14 @@ class PropertyDetailsPage extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) =>
-                                PropertyInquiryPage(property: property),
+                            builder: (_) => PropertyInquiryPage(
+                              property: property,
+                            ),
                           ),
                         );
                       },
                       icon: const Icon(Icons.message_outlined),
-                      label: const Text("Send Property Inquiry"),
+                      label: const Text('Send Property Inquiry'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
                         side: const BorderSide(color: AppColors.primary),
@@ -329,7 +650,6 @@ class PropertyDetailsPage extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 30),
                 ],
               ),
@@ -371,14 +691,21 @@ class PropertyDetailsPage extends StatelessWidget {
   }
 
   Widget _divider() {
-    return Container(width: 1, height: 45, color: AppColors.divider);
+    return Container(
+      width: 1,
+      height: 45,
+      color: AppColors.divider,
+    );
   }
 }
 
 class PropertyInquiryPage extends StatefulWidget {
-  final Map<String, String> property;
+  final Map<String, dynamic> property;
 
-  const PropertyInquiryPage({super.key, required this.property});
+  const PropertyInquiryPage({
+    super.key,
+    required this.property,
+  });
 
   @override
   State<PropertyInquiryPage> createState() => _PropertyInquiryPageState();
@@ -390,7 +717,7 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
   final _phoneController = TextEditingController();
   final _messageController = TextEditingController();
 
-  String _inquiryType = "Price Details";
+  String _inquiryType = 'Price Details';
   bool _isSubmitting = false;
 
   @override
@@ -408,7 +735,9 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please log in to send an inquiry.")),
+        const SnackBar(
+          content: Text('Please log in to send an inquiry.'),
+        ),
       );
       return;
     }
@@ -416,55 +745,70 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      final brokerId =
-          widget.property["brokerId"] ??
-          widget.property["broker_id"] ??
-          widget.property["ownerId"] ??
-          "";
+      final brokerId = (widget.property['brokerId'] ??
+              widget.property['broker_id'] ??
+              widget.property['ownerId'] ??
+              '')
+          .toString();
 
-      await FirebaseFirestore.instance.collection("inquiries").add({
-        "propertyId":
-            widget.property["id"] ?? widget.property["propertyId"] ?? "",
-        "propertyName": widget.property["name"] ?? "Property",
-        "propertyPrice": widget.property["price"] ?? "",
-        "propertyType": widget.property["type"] ?? "",
-        "propertyLocation": widget.property["location"] ?? "",
-        "buyerId": user.uid,
-        "buyerName": _nameController.text.trim(),
-        "buyerPhone": _phoneController.text.trim(),
-        "brokerId": brokerId,
-        "inquiryType": _inquiryType,
-        "message": _messageController.text.trim(),
-        "brokerResponse": "",
-        "quotedPrice": "",
-        "availability": "Not specified",
-        "status": "Pending",
-        "createdAt": FieldValue.serverTimestamp(),
-        "respondedAt": null,
+      await FirebaseFirestore.instance.collection('inquiries').add({
+        'propertyId': widget.property['id'] ??
+            widget.property['propertyId'] ??
+            '',
+        'propertyName': widget.property['title'] ??
+            widget.property['name'] ??
+            'Property',
+        'propertyPrice': widget.property['price']?.toString() ?? '',
+        'propertyType': widget.property['propertyType'] ??
+            widget.property['type'] ??
+            '',
+        'propertyLocation':
+            widget.property['location']?.toString() ?? '',
+        'buyerId': user.uid,
+        'buyerName': _nameController.text.trim(),
+        'buyerPhone': _phoneController.text.trim(),
+        'brokerId': brokerId,
+        'inquiryType': _inquiryType,
+        'message': _messageController.text.trim(),
+        'brokerResponse': '',
+        'quotedPrice': '',
+        'availability': 'Not specified',
+        'status': 'Pending',
+        'createdAt': FieldValue.serverTimestamp(),
+        'respondedAt': null,
       });
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Your inquiry has been submitted successfully."),
+          content: Text(
+            'Your inquiry has been submitted successfully.',
+          ),
         ),
       );
+
       Navigator.pop(context);
     } on FirebaseException catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Could not submit inquiry: ${e.message}")),
+        SnackBar(
+          content: Text('Could not submit inquiry: ${e.message}'),
+        ),
       );
     } catch (_) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Something went wrong. Please try again."),
+          content: Text('Something went wrong. Please try again.'),
         ),
       );
     } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -472,15 +816,20 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
   Widget build(BuildContext context) {
     final property = widget.property;
 
+    final propertyName =
+        property['title'] ?? property['name'] ?? 'Property';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        iconTheme: const IconThemeData(
+          color: AppColors.textPrimary,
+        ),
         title: const Text(
-          "Property Inquiry",
+          'Property Inquiry',
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 20,
@@ -512,7 +861,7 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "Inquiry for",
+                      'Inquiry for',
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 13,
@@ -520,7 +869,7 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      property["name"] ?? "Property",
+                      propertyName.toString(),
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 18,
@@ -529,7 +878,8 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      "${property["price"] ?? ""} • ${property["location"] ?? ""}",
+                      '${property['price'] ?? ''} • '
+                      '${property['location'] ?? ''}',
                       style: const TextStyle(
                         color: AppColors.primary,
                         fontSize: 13,
@@ -541,7 +891,7 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
               ),
               const SizedBox(height: 24),
               const Text(
-                "Your Details",
+                'Your Details',
                 style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 18,
@@ -549,75 +899,82 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
                 ),
               ),
               const SizedBox(height: 14),
-              _buildLabel("Full Name"),
+              _buildLabel('Full Name'),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _nameController,
                 textCapitalization: TextCapitalization.words,
                 decoration: _inputDecoration(
-                  hint: "Enter your full name",
+                  hint: 'Enter your full name',
                   icon: Icons.person_outline,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return "Please enter your name";
+                    return 'Please enter your name';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-              _buildLabel("Contact Number"),
+              _buildLabel('Contact Number'),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 maxLength: 10,
                 decoration: _inputDecoration(
-                  hint: "Enter 10-digit mobile number",
+                  hint: 'Enter 10-digit mobile number',
                   icon: Icons.phone_outlined,
-                ).copyWith(counterText: ""),
+                ).copyWith(counterText: ''),
                 validator: (value) {
-                  final phone = value?.trim() ?? "";
+                  final phone = value?.trim() ?? '';
+
                   if (!RegExp(r'^[0-9]{10}$').hasMatch(phone)) {
-                    return "Enter a valid 10-digit mobile number";
+                    return 'Enter a valid 10-digit mobile number';
                   }
+
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-              _buildLabel("Inquiry Type"),
+              _buildLabel('Inquiry Type'),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _inquiryType,
                 decoration: _inputDecoration(
-                  hint: "Select inquiry type",
+                  hint: 'Select inquiry type',
                   icon: Icons.help_outline,
                 ),
                 items: const [
                   DropdownMenuItem(
-                    value: "Price Details",
-                    child: Text("Price Details"),
+                    value: 'Price Details',
+                    child: Text('Price Details'),
                   ),
                   DropdownMenuItem(
-                    value: "Availability",
-                    child: Text("Availability"),
+                    value: 'Availability',
+                    child: Text('Availability'),
                   ),
                   DropdownMenuItem(
-                    value: "Property Details",
-                    child: Text("Property Details"),
+                    value: 'Property Details',
+                    child: Text('Property Details'),
                   ),
                   DropdownMenuItem(
-                    value: "Negotiation",
-                    child: Text("Price Negotiation"),
+                    value: 'Negotiation',
+                    child: Text('Price Negotiation'),
                   ),
-                  DropdownMenuItem(value: "Other", child: Text("Other")),
+                  DropdownMenuItem(
+                    value: 'Other',
+                    child: Text('Other'),
+                  ),
                 ],
                 onChanged: (value) {
-                  if (value != null) setState(() => _inquiryType = value);
+                  if (value != null) {
+                    setState(() => _inquiryType = value);
+                  }
                 },
               ),
               const SizedBox(height: 16),
-              _buildLabel("Your Question"),
+              _buildLabel('Your Question'),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _messageController,
@@ -625,16 +982,18 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
                 maxLines: 6,
                 maxLength: 500,
                 decoration: _inputDecoration(
-                  hint: "Write your question about this property...",
+                  hint: 'Write your question about this property...',
                   icon: Icons.message_outlined,
                 ).copyWith(alignLabelWithHint: true),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return "Please enter your question";
+                    return 'Please enter your question';
                   }
+
                   if (value.trim().length < 10) {
-                    return "Please enter at least 10 characters";
+                    return 'Please enter at least 10 characters';
                   }
+
                   return null;
                 },
               ),
@@ -656,7 +1015,9 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        "Your inquiry will be sent to the broker of this property. You can check the broker's response in My Inquiries.",
+                        "Your inquiry will be sent to the broker of "
+                        "this property. You can check the broker's "
+                        "response in My Inquiries.",
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
@@ -671,7 +1032,8 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _isSubmitting ? null : _submitInquiry,
+                  onPressed:
+                      _isSubmitting ? null : _submitInquiry,
                   icon: _isSubmitting
                       ? const SizedBox(
                           height: 18,
@@ -683,14 +1045,15 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
                         )
                       : const Icon(Icons.send_rounded),
                   label: Text(
-                    _isSubmitting ? "Submitting..." : "Submit Inquiry",
+                    _isSubmitting
+                        ? 'Submitting...'
+                        : 'Submit Inquiry',
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.primary.withValues(
-                      alpha: 0.5,
-                    ),
+                    disabledBackgroundColor:
+                        AppColors.primary.withValues(alpha: 0.5),
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
@@ -724,10 +1087,16 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
   }) {
     return InputDecoration(
       hintText: hint,
-      prefixIcon: Icon(icon, color: AppColors.textSecondary),
+      prefixIcon: Icon(
+        icon,
+        color: AppColors.textSecondary,
+      ),
       filled: true,
       fillColor: AppColors.surface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 14,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppColors.border),
@@ -738,7 +1107,10 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        borderSide: const BorderSide(
+          color: AppColors.primary,
+          width: 1.5,
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -746,7 +1118,10 @@ class _PropertyInquiryPageState extends State<PropertyInquiryPage> {
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+        borderSide: const BorderSide(
+          color: AppColors.error,
+          width: 1.5,
+        ),
       ),
     );
   }
